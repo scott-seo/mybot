@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
+
+	homedir "github.com/mitchellh/go-homedir"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -24,7 +28,31 @@ func makeSigner(keyname string) (signer ssh.Signer, err error) {
 
 func getSigners() ([]ssh.Signer, error) {
 	signers := []ssh.Signer{}
-	keys := []string{os.Getenv("SSH_KEY_PATH")}
+
+	fileList := []string{}
+
+	home, _ := homedir.Dir()
+	err := filepath.Walk(home+"/.aws/", func(path string, f os.FileInfo, err error) error {
+		if !f.IsDir() && strings.HasSuffix(f.Name(), "pem") {
+			fileList = append(fileList, path)
+		}
+		return nil
+	})
+	err = filepath.Walk(home+"/.ssh/", func(path string, f os.FileInfo, err error) error {
+		if !f.IsDir() && (strings.HasSuffix(f.Name(), "_rsa") || strings.HasSuffix(f.Name(), "_dsa")) {
+			fileList = append(fileList, path)
+		}
+		return nil
+	})
+
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	fmt.Println(fileList)
+
+	keys := fileList
 
 	for _, keyname := range keys {
 		signer, err := makeSigner(keyname)
@@ -69,6 +97,12 @@ func SSH(user string, hostname string, cmd string) string {
 }
 
 func SSHAction(args []string) {
-	s := SSH(args[0], args[1], "docker run --rm hello-world")
-	fmt.Print(s)
+	user := strings.Split(args[0], "@")[0]
+	host := strings.Split(args[0], "@")[1]
+	cmd := strings.Replace(strings.Join(args[1:], " "), `"`, "", -1)
+	s := SSH(user, host, cmd)
+	// fmt.Println(args[0])
+	// fmt.Println(args[1])
+	// fmt.Println(strings.Join(args[2:], " "))
+	fmt.Println(s)
 }

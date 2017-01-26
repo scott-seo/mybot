@@ -23,6 +23,7 @@ func main() {
 	}
 
 	for {
+	next:
 		var command string
 		var err error
 
@@ -44,8 +45,11 @@ func main() {
 					} else {
 						f([]string{})
 					}
+					goto next
 				}
 			}
+
+			bashcmd(tokens)
 
 			if len(os.Args) > 1 {
 				goto end
@@ -55,7 +59,7 @@ func main() {
 			log.Print("Aborted")
 			goto end
 		} else {
-			log.Print("Error reading line: ", err)
+			// log.Print("Error reading line: ", err)
 			goto end
 		}
 	}
