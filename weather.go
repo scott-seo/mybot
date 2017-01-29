@@ -6,7 +6,79 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"os"
+
+	"github.com/blevesearch/bleve"
 )
+
+var index bleve.Index
+
+func IndexCity() {
+	// open a new index
+
+	mapping := bleve.NewIndexMapping()
+	index, err := bleve.New("city.bleve", mapping)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// index some data
+	// file, err := os.Open("/Users/seos/src/github.com/scott-seo/mybot/city.list.us.json")
+	file, err := os.Open("./city.list.us.json")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	scanner := bufio.NewScanner(file)
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, 3*1024*1024)
+
+	fmt.Println("opening file" + file.Name())
+
+	cityChan := make(chan City, 1000)
+	done := make(chan bool)
+
+	go func() {
+		for {
+			city, more := <-cityChan
+			if more {
+				err = index.Index(string(city.ID), city)
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+			} else {
+				fmt.Println("no more to index")
+				done <- true
+				return
+			}
+		}
+	}()
+
+	go func() {
+
+		for scanner.Scan() {
+			data := scanner.Bytes()
+			if err != nil {
+				fmt.Println(err)
+			}
+			cityPtr := new(City)
+			json.Unmarshal(data, &cityPtr)
+
+			fmt.Print(".")
+			cityChan <- *cityPtr
+		}
+
+		close(cityChan)
+	}()
+
+	<-done
+
+	fmt.Println("indexing completed")
+}
 
 type WeatherData struct {
 	Base   string `json:"base"`
@@ -74,4 +146,31 @@ func WeatherAction(args []string) {
 	json.Unmarshal(data, &weather)
 
 	fmt.Println(weather)
+}
+
+type City struct {
+	ID    int64 `json:"_id"`
+	Coord struct {
+		Lat float64 `json:"lat"`
+		Lon float64 `json:"lon"`
+	} `json:"coord"`
+	Country string `json:"country"`
+	Name    string `json:"name"`
+}
+
+func CitySearch(partialWord string) []string {
+	fmt.Println("searching by " + partialWord)
+
+	// search for some text
+	query := bleve.NewMatchQuery(partialWord)
+	search := bleve.NewSearchRequest(query)
+	searchResults, err := index.Search(search)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println(searchResults)
+
+	return []string{}
 }

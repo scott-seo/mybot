@@ -1,11 +1,13 @@
 package main
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 func WordCompleter(line string, pos int) (head string, completions []string, tail string) {
 
 	prefix := line[0:pos]
-	// suffix := line[pos:]
 
 	// first word completion
 	if !strings.Contains(prefix, " ") {
@@ -21,9 +23,23 @@ func WordCompleter(line string, pos int) (head string, completions []string, tai
 	}
 
 	// second word completion
-	firstword := prefix[0 : len(prefix)-1]
+	terms := strings.Split(line, " ")
+	firstword := terms[0]
+	secondWordPartial := ""
+	if len(terms) > 1 {
+		secondWordPartial = terms[1]
+	}
+
+	fmt.Printf("\n first word = %s \n", firstword)
+	fmt.Println("second word = " + secondWordPartial)
+
 	for _, command := range commands {
 		if firstword == command.verb {
+
+			if command.secWordComplete != nil && secondWordPartial != "" {
+				return prefix, command.secWordComplete(secondWordPartial), ""
+			}
+
 			return prefix, command.targets, ""
 		}
 	}

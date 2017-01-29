@@ -8,9 +8,10 @@ import (
 )
 
 type command struct {
-	verb    string
-	targets []string
-	action  func([]string)
+	verb            string
+	targets         []string
+	action          func([]string)
+	secWordComplete func(string) []string
 }
 
 var commands []command = []command{
@@ -18,16 +19,19 @@ var commands []command = []command{
 		"hello",
 		[]string{"foo", "bar"},
 		hello,
+		nil,
 	},
 	command{
 		"ssh",
 		[]string{},
 		SSHAction,
+		nil,
 	},
 	command{
 		"weather",
 		[]string{},
 		WeatherAction,
+		CitySearch,
 	},
 }
 

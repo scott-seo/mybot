@@ -13,6 +13,8 @@ import (
 var historyFn = filepath.Join(os.TempDir(), ".liner_history")
 
 func main() {
+	IndexCity()
+
 	line := liner.NewLiner()
 	defer line.Close()
 	line.SetCtrlCAborts(true)
