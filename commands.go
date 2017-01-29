@@ -24,6 +24,11 @@ var commands []command = []command{
 		[]string{},
 		SSHAction,
 	},
+	command{
+		"weather",
+		[]string{},
+		WeatherAction,
+	},
 }
 
 func hello(args []string) {
