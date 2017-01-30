@@ -14,7 +14,7 @@ import (
 	"github.com/blevesearch/bleve"
 )
 
-var debug = false
+var debug = true
 
 func init() {
 	cityIndex, err := bleve.Open("./city.bleve")
@@ -164,7 +164,8 @@ func WeatherAction(args []string) {
 	//cityId := "5133268"
 	city := strings.Join(args[0:], "%20")
 
-	// city = strings.Replace(city, " ", "%20", -1)
+	// fmt.Println("==>" + city)
+	// return
 
 	appId := "a12b2abebca2d75b74f6ebb800dc06c2"
 
@@ -203,7 +204,9 @@ func (c *City) String() string {
 }
 
 func CitySearch(term string) []string {
-	// fmt.Printf("searching by %s \n", terms)
+	if debug {
+		// fmt.Printf("\nsearching by [%s]\n", term)
+	}
 
 	cityIndex, _ := bleve.Open("city.bleve")
 
@@ -213,7 +216,7 @@ func CitySearch(term string) []string {
 	}
 
 	// search for some text
-	query := bleve.NewPrefixQuery
+	query := bleve.NewMatchQuery(term)
 	search := bleve.NewSearchRequest(query)
 	searchResults, err := cityIndex.Search(search)
 
@@ -221,7 +224,9 @@ func CitySearch(term string) []string {
 		fmt.Println(err)
 	}
 
-	// fmt.Println(searchResults)
+	if debug {
+		//fmt.Printf("\n%s\n", searchResults)
+	}
 
 	var names = make([]string, 0, 0)
 
@@ -236,7 +241,6 @@ func CitySearch(term string) []string {
 				name := string(f.Value())
 				if strings.HasPrefix(name, term) {
 					n := strings.Replace(name, term, "", -1)
-					// fmt.Println(n)
 					names = append(names, n)
 				}
 			}
