@@ -202,7 +202,7 @@ func (c *City) String() string {
 	return fmt.Sprintf("ID: %d\nName: %s\n", c.ID, c.Name)
 }
 
-func CitySearch(terms []string) []string {
+func CitySearch(term string) []string {
 	// fmt.Printf("searching by %s \n", terms)
 
 	cityIndex, _ := bleve.Open("city.bleve")
@@ -213,7 +213,7 @@ func CitySearch(terms []string) []string {
 	}
 
 	// search for some text
-	query := bleve.NewMatchQuery(strings.Join(terms, " "))
+	query := bleve.NewPrefixQuery
 	search := bleve.NewSearchRequest(query)
 	searchResults, err := cityIndex.Search(search)
 
@@ -234,8 +234,8 @@ func CitySearch(terms []string) []string {
 			switch f.Name() {
 			case "name":
 				name := string(f.Value())
-				if strings.HasPrefix(name, terms[0]) {
-					n := strings.Replace(name, terms[0], "", -1)
+				if strings.HasPrefix(name, term) {
+					n := strings.Replace(name, term, "", -1)
 					// fmt.Println(n)
 					names = append(names, n)
 				}
