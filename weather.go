@@ -4,28 +4,28 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"sync"
+	"io/ioutil"
+	"net/http"
 
 	"os"
+
+	"strings"
 
 	"github.com/blevesearch/bleve"
 )
 
-var cityIndex bleve.Index
+var debug = false
 
-func IndexCity() {
-	// open a new index
-
-	index, err := bleve.Open("city.bleve")
+func init() {
+	cityIndex, err := bleve.Open("./city.bleve")
 	if err == nil {
 		fmt.Println("Existing index found")
-		cityIndex = index
 		return
 	}
 
 	fmt.Println("Reindexing")
 	mapping := bleve.NewIndexMapping()
-	index, err = bleve.New("city.bleve", mapping)
+	cityIndex, err = bleve.New("city.bleve", mapping)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -39,69 +39,78 @@ func IndexCity() {
 		return
 	}
 
+	cityChan := make(chan City, 1)
+	done := make(chan bool)
+
+	go cityIndxer(cityChan, cityIndex, done)
+
+	go readJson(file, cityChan)
+
+	<-done
+
+	fmt.Println("json file processing completed")
+
+	err = cityIndex.Close()
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+// json file reader
+func readJson(file *os.File, cityChan chan City) {
 	scanner := bufio.NewScanner(file)
 	buf := make([]byte, 0, 64*1024)
 	scanner.Buffer(buf, 2*1024*1024)
 
 	fmt.Println("opening file" + file.Name())
 
-	indexerCount := 25
+	for scanner.Scan() {
+		data := scanner.Bytes()
+		// go routine the json unmarshalling
+		// go func(cityBytes []byte) {
+		// fmt.Println(string(cityBytes))
 
-	cityChan := make(chan City, 50)
-	done := make(chan bool)
+		cityPtr := new(City)
+		json.Unmarshal(data, &cityPtr)
 
-	for i := 0; i < indexerCount; i++ {
-		// indexer go routines
-		go cityIndxer(cityChan, index)
+		// fmt.Printf("json = %s\n", cityPtr.Name)
+		cityChan <- *cityPtr
+		// }(data)
 	}
 
-	// json file reader
-	go func() {
-		var wg sync.WaitGroup
-
-		for scanner.Scan() {
-			data := scanner.Bytes()
-			wg.Add(1)
-			if err != nil {
-				fmt.Println(err)
-			}
-			// go routine the json unmarshalling
-			go func(cityBytes []byte) {
-				cityPtr := new(City)
-				json.Unmarshal(cityBytes, &cityPtr)
-
-				fmt.Printf("json = %s", *cityPtr)
-				cityChan <- *cityPtr
-				wg.Done()
-			}(data)
-		}
-
-		wg.Wait()
-		done <- true
-		close(cityChan)
-	}()
-
-	<-done
-
-	cityIndex = index
-
-	fmt.Println("json file processing completed")
+	close(cityChan)
 }
 
-func cityIndxer(cityChan chan City, index bleve.Index) {
+func cityIndxer(cityChan chan City, index bleve.Index, done chan bool) {
 	for {
 		city, more := <-cityChan
-		fmt.Printf("indexing city %s\n", city)
+		if debug {
+			fmt.Printf("indexing %d, %s ", city.ID, city.Name)
+		}
+
 		if more {
-			go func() {
-				err := index.Index(string(city.ID), city)
-				fmt.Print(">")
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-			}()
+			// go func() {
+			doc := struct {
+				Id   string
+				Name string
+			}{
+				Id:   string(city.ID),
+				Name: city.Name,
+			}
+
+			err := index.Index(string(city.ID), doc)
+
+			if debug {
+				fmt.Print(">\n")
+			}
+
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			// }()
 		} else {
+			done <- true
 			return
 		}
 	}
@@ -152,29 +161,31 @@ func (w WeatherData) String() string {
 }
 
 func WeatherAction(args []string) {
-	fmt.Println("skipping")
+	//cityId := "5133268"
+	city := strings.Join(args[0:], "%20")
 
-	// cityId := "5133268"
-	// appId := "a12b2abebca2d75b74f6ebb800dc06c2"
+	// city = strings.Replace(city, " ", "%20", -1)
 
-	// resp, err := http.Get(fmt.Sprintf("http://api.openweathermap.org/data/2.5/weather?id=%s&appid=%s&units=imperial", cityId, appId))
+	appId := "a12b2abebca2d75b74f6ebb800dc06c2"
 
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
+	resp, err := http.Get(fmt.Sprintf("http://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s&units=imperial", city, appId))
 
-	// data, err := ioutil.ReadAll(bufio.NewReader(resp.Body))
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-	// weather := new(WeatherData)
+	data, err := ioutil.ReadAll(bufio.NewReader(resp.Body))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-	// json.Unmarshal(data, &weather)
+	weather := new(WeatherData)
 
-	// fmt.Println(weather)
+	json.Unmarshal(data, &weather)
+
+	fmt.Println(weather)
 }
 
 type City struct {
@@ -191,11 +202,18 @@ func (c *City) String() string {
 	return fmt.Sprintf("ID: %d\nName: %s\n", c.ID, c.Name)
 }
 
-func CitySearch(partialWord string) []string {
-	fmt.Println("searching by " + partialWord)
+func CitySearch(terms []string) []string {
+	// fmt.Printf("searching by %s \n", terms)
+
+	cityIndex, _ := bleve.Open("city.bleve")
+
+	if cityIndex == nil {
+		fmt.Println("cityIndex is nil")
+		return []string{}
+	}
 
 	// search for some text
-	query := bleve.NewPrefixQuery(partialWord)
+	query := bleve.NewMatchQuery(strings.Join(terms, " "))
 	search := bleve.NewSearchRequest(query)
 	searchResults, err := cityIndex.Search(search)
 
@@ -203,7 +221,34 @@ func CitySearch(partialWord string) []string {
 		fmt.Println(err)
 	}
 
-	fmt.Println(searchResults)
+	// fmt.Println(searchResults)
 
-	return []string{}
+	var names = make([]string, 0, 0)
+
+	for _, hit := range searchResults.Hits {
+		doc, err := cityIndex.Document(hit.ID)
+		if err != nil {
+			fmt.Println(err)
+		}
+		for _, f := range doc.Fields {
+			switch f.Name() {
+			case "name":
+				name := string(f.Value())
+				if strings.HasPrefix(name, terms[0]) {
+					n := strings.Replace(name, terms[0], "", -1)
+					// fmt.Println(n)
+					names = append(names, n)
+				}
+			}
+		}
+	}
+
+	if debug {
+		fmt.Println()
+		for _, n := range names {
+			fmt.Printf("[%s]\n", n)
+		}
+	}
+
+	return names
 }

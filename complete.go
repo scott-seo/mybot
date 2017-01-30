@@ -1,9 +1,6 @@
 package main
 
-import (
-	"fmt"
-	"strings"
-)
+import "strings"
 
 func WordCompleter(line string, pos int) (head string, completions []string, tail string) {
 
@@ -25,19 +22,14 @@ func WordCompleter(line string, pos int) (head string, completions []string, tai
 	// second word completion
 	terms := strings.Split(line, " ")
 	firstword := terms[0]
-	secondWordPartial := ""
-	if len(terms) > 1 {
-		secondWordPartial = terms[1]
-	}
 
-	fmt.Printf("\n first word = %s \n", firstword)
-	fmt.Println("second word = " + secondWordPartial)
+	// fmt.Printf("\n terms = %s \n", terms)
 
 	for _, command := range commands {
 		if firstword == command.verb {
 
-			if command.secWordComplete != nil && secondWordPartial != "" {
-				return prefix, command.secWordComplete(secondWordPartial), ""
+			if command.secWordComplete != nil && len(terms) > 1 {
+				return prefix, command.secWordComplete(terms[1:]), ""
 			}
 
 			return prefix, command.targets, ""

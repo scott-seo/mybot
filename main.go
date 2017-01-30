@@ -13,7 +13,7 @@ import (
 var historyFn = filepath.Join(os.TempDir(), ".liner_history")
 
 func main() {
-	IndexCity()
+	// IndexCity()
 
 	line := liner.NewLiner()
 	defer line.Close()

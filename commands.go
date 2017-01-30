@@ -11,7 +11,7 @@ type command struct {
 	verb            string
 	targets         []string
 	action          func([]string)
-	secWordComplete func(string) []string
+	secWordComplete func([]string) []string
 }
 
 var commands []command = []command{
