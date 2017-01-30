@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"sync"
 
 	"os"
 
 	"github.com/blevesearch/bleve"
 )
 
-var index bleve.Index
+var cityIndex bleve.Index
 
 func IndexCity() {
 	// open a new index
@@ -34,50 +35,69 @@ func IndexCity() {
 
 	scanner := bufio.NewScanner(file)
 	buf := make([]byte, 0, 64*1024)
-	scanner.Buffer(buf, 3*1024*1024)
+	scanner.Buffer(buf, 2*1024*1024)
 
 	fmt.Println("opening file" + file.Name())
 
-	cityChan := make(chan City, 1000)
+	indexerCount := 25
+
+	cityChan := make(chan City, 50)
 	done := make(chan bool)
 
-	go func() {
-		for {
-			city, more := <-cityChan
-			if more {
-				err = index.Index(string(city.ID), city)
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-			} else {
-				fmt.Println("no more to index")
-				done <- true
-				return
-			}
-		}
-	}()
+	for i := 0; i < indexerCount; i++ {
+		// indexer go routines
+		go cityIndxer(cityChan, index)
+	}
 
+	// json file reader
 	go func() {
+		var wg sync.WaitGroup
 
 		for scanner.Scan() {
 			data := scanner.Bytes()
+			wg.Add(1)
 			if err != nil {
 				fmt.Println(err)
 			}
-			cityPtr := new(City)
-			json.Unmarshal(data, &cityPtr)
+			// go routine the json unmarshalling
+			go func() {
+				cityPtr := new(City)
+				json.Unmarshal(data, &cityPtr)
 
-			fmt.Print(".")
-			cityChan <- *cityPtr
+				// fmt.Print(".")
+				cityChan <- *cityPtr
+				wg.Done()
+			}()
 		}
 
+		wg.Wait()
+		done <- true
 		close(cityChan)
 	}()
 
 	<-done
 
-	fmt.Println("indexing completed")
+	cityIndex = index
+
+	fmt.Println("json file processing completed")
+}
+
+func cityIndxer(cityChan chan City, index bleve.Index) {
+	for {
+		city, more := <-cityChan
+		if more {
+			go func() {
+				err := index.Index(string(city.ID), city)
+				fmt.Print(">")
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+			}()
+		} else {
+			return
+		}
+	}
 }
 
 type WeatherData struct {
@@ -164,7 +184,7 @@ func CitySearch(partialWord string) []string {
 	// search for some text
 	query := bleve.NewMatchQuery(partialWord)
 	search := bleve.NewSearchRequest(query)
-	searchResults, err := index.Search(search)
+	searchResults, err := cityIndex.Search(search)
 
 	if err != nil {
 		fmt.Println(err)
