@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"sync"
 
 	"os"
@@ -18,8 +16,16 @@ var cityIndex bleve.Index
 func IndexCity() {
 	// open a new index
 
+	index, err := bleve.Open("city.bleve")
+	if err == nil {
+		fmt.Println("Existing index found")
+		cityIndex = index
+		return
+	}
+
+	fmt.Println("Reindexing")
 	mapping := bleve.NewIndexMapping()
-	index, err := bleve.New("city.bleve", mapping)
+	index, err = bleve.New("city.bleve", mapping)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -60,14 +66,14 @@ func IndexCity() {
 				fmt.Println(err)
 			}
 			// go routine the json unmarshalling
-			go func() {
+			go func(cityBytes []byte) {
 				cityPtr := new(City)
-				json.Unmarshal(data, &cityPtr)
+				json.Unmarshal(cityBytes, &cityPtr)
 
-				// fmt.Print(".")
+				fmt.Printf("json = %s", *cityPtr)
 				cityChan <- *cityPtr
 				wg.Done()
-			}()
+			}(data)
 		}
 
 		wg.Wait()
@@ -85,6 +91,7 @@ func IndexCity() {
 func cityIndxer(cityChan chan City, index bleve.Index) {
 	for {
 		city, more := <-cityChan
+		fmt.Printf("indexing city %s\n", city)
 		if more {
 			go func() {
 				err := index.Index(string(city.ID), city)
@@ -145,27 +152,29 @@ func (w WeatherData) String() string {
 }
 
 func WeatherAction(args []string) {
-	cityId := args[0]
-	appId := args[1]
+	fmt.Println("skipping")
 
-	resp, err := http.Get(fmt.Sprintf("http://api.openweathermap.org/data/2.5/weather?id=%s&appid=%s&units=imperial", cityId, appId))
+	// cityId := "5133268"
+	// appId := "a12b2abebca2d75b74f6ebb800dc06c2"
 
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	// resp, err := http.Get(fmt.Sprintf("http://api.openweathermap.org/data/2.5/weather?id=%s&appid=%s&units=imperial", cityId, appId))
 
-	data, err := ioutil.ReadAll(bufio.NewReader(resp.Body))
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
 
-	weather := new(WeatherData)
+	// data, err := ioutil.ReadAll(bufio.NewReader(resp.Body))
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
 
-	json.Unmarshal(data, &weather)
+	// weather := new(WeatherData)
 
-	fmt.Println(weather)
+	// json.Unmarshal(data, &weather)
+
+	// fmt.Println(weather)
 }
 
 type City struct {
@@ -178,11 +187,15 @@ type City struct {
 	Name    string `json:"name"`
 }
 
+func (c *City) String() string {
+	return fmt.Sprintf("ID: %d\nName: %s\n", c.ID, c.Name)
+}
+
 func CitySearch(partialWord string) []string {
 	fmt.Println("searching by " + partialWord)
 
 	// search for some text
-	query := bleve.NewMatchQuery(partialWord)
+	query := bleve.NewPrefixQuery(partialWord)
 	search := bleve.NewSearchRequest(query)
 	searchResults, err := cityIndex.Search(search)
 
