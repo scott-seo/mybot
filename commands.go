@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"strings"
 )
 
 type command struct {
@@ -33,6 +34,27 @@ var commands []command = []command{
 		WeatherAction,
 		CitySearch,
 	},
+	command{
+		"gmail",
+		[]string{},
+		gmail,
+		nil,
+	},
+	command{
+		"google",
+		[]string{},
+		google,
+		nil,
+	},
+}
+
+func google(args []string) {
+	q := strings.Join(args, "+")
+	bashcmd([]string{"open", "-a", "Google Chrome", fmt.Sprintf("https://www.google.com/#q=%s", q)})
+}
+
+func gmail(args []string) {
+	bashcmd([]string{"open", "-a", "Google Chrome", "https://mail.google.com"})
 }
 
 func hello(args []string) {
