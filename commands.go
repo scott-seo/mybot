@@ -48,8 +48,14 @@ var commands []command = []command{
 	},
 	command{
 		"alert",
-		[]string{"warning", "info"},
+		[]string{"warning", "info", "end"},
 		alert,
+		nil,
+	},
+	command{
+		"graph",
+		[]string{"warning", "info", "end"},
+		graph,
 		nil,
 	},
 }
@@ -69,6 +75,10 @@ func hello(args []string) {
 
 func alert(args []string) {
 	go bashcmd([]string{"afplay", fmt.Sprintf("./alert_%s.mp3", args[0])})
+}
+
+func graph(args []string) {
+	bashcmd([]string{"open", "-a", "Google Chrome", "./graph.svg"})
 }
 
 func bashcmd(args []string) {
