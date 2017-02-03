@@ -18,7 +18,9 @@ type command struct {
 	secWordComplete func(string) []string
 }
 
-var commands []command = []command{}
+var commands = []command{}
+
+var memory = make(map[string]string)
 
 // this is interesting if the initilization was done at variable assignment
 // go complains about initialization loop but
@@ -70,7 +72,7 @@ func init() {
 		command{
 			"healthcheck",
 			[]string{},
-			health,
+			healthcheck,
 			nil,
 		},
 		command{
@@ -91,6 +93,18 @@ func init() {
 			goroutine,
 			nil,
 		},
+		command{
+			"put",
+			[]string{},
+			put,
+			nil,
+		},
+		command{
+			"get",
+			[]string{},
+			get,
+			nil,
+		},
 	}
 }
 
@@ -107,23 +121,98 @@ func hello(args []string) {
 	fmt.Println("hello " + strings.Join(args[0:], " "))
 }
 
+// alert [warning|info|end]
 func alert(args []string) {
 	go bashcmd([]string{"afplay", fmt.Sprintf("./alert_%s.mp3", args[0])})
+
+	// call chained command
+	if len(args) > 1 {
+		executeNextIfAny(args[1:])
+	}
+}
+
+// put <key> <value> cmd...
+func put(args []string) {
+
+	memory[args[0]] = args[1]
+	fmt.Println(memory)
+
+	// call chained command
+	if len(args) > 2 {
+		executeNextIfAny(args[2:])
+	}
+}
+
+func insert(a []string, x string, i int) []string {
+	return append(a[:i], append([]string{x}, a[i:]...)...)
+}
+
+// get <key> cmd...
+func get(args []string) {
+	var stdout = true
+	var key = args[0]
+	var value = memory[key]
+	var hasNext = len(args) > 1
+	var nextTermPost = 1
+
+	if hasNext && args[1] == "|" {
+		stdout = false
+		nextTermPost = 2
+		args = insert(args, value, nextTermPost+1)
+	}
+
+	if *debug {
+		fmt.Printf("args = %s \n", args)
+		fmt.Printf("stdout = %v \n", stdout)
+	}
+
+	if stdout {
+		fmt.Println(value)
+	}
+
+	// call chained command
+	if hasNext {
+		executeNextIfAny(args[nextTermPost:])
+	}
 }
 
 func graph(args []string) {
 	bashcmd([]string{"open", "-a", "Google Chrome", "./graph.svg"})
 }
 
-func health(args []string) {
-	resp, err := http.Get(args[0])
+// healthcheck <url> |
+func healthcheck(args []string) {
+	var stdout = true
+	var url = args[0]
+	var value = ""
+	var hasNext = len(args) > 1
+	var nextTermPost = 1
+
+	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	status := resp.Status
+	value = fmt.Sprintf("%d", resp.StatusCode)
 
-	fmt.Printf("status = %s \n", status)
+	if hasNext && args[1] == "|" {
+		stdout = false
+		nextTermPost = 2
+		args = insert(args, value, nextTermPost+1)
+	}
+
+	if stdout {
+		fmt.Printf("status code = %s \n", value)
+	}
+
+	if *debug {
+		fmt.Println(args)
+	}
+
+	// call chained command
+	if len(args) > 1 {
+		executeNextIfAny(args[nextTermPost:])
+	}
 }
 
 // wait <seconds> <cmd> <args>
@@ -138,10 +227,15 @@ func wait(args []string) {
 	time.Sleep(time.Second * time.Duration(seconds))
 
 	// call chained command
-	if len(args) > 2 {
-		cmd := findCommand(args[1])
+	if len(args) > 1 {
+		executeNextIfAny(args[1:])
+	}
+}
 
-		cmd.action(args[2:])
+func executeNextIfAny(args []string) {
+	if len(args) > 0 {
+		cmd := findCommand(args[0])
+		cmd.action(args[1:])
 	}
 }
 

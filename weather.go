@@ -14,8 +14,6 @@ import (
 	"github.com/blevesearch/bleve"
 )
 
-var debug = true
-
 func init() {
 	cityIndex, err := bleve.Open("./city.bleve")
 	if err == nil {
@@ -84,7 +82,7 @@ func readJson(file *os.File, cityChan chan City) {
 func cityIndxer(cityChan chan City, index bleve.Index, done chan bool) {
 	for {
 		city, more := <-cityChan
-		if debug {
+		if *debug {
 			fmt.Printf("indexing %d, %s ", city.ID, city.Name)
 		}
 
@@ -100,7 +98,7 @@ func cityIndxer(cityChan chan City, index bleve.Index, done chan bool) {
 
 			err := index.Index(string(city.ID), doc)
 
-			if debug {
+			if *debug {
 				fmt.Print(">\n")
 			}
 
@@ -204,8 +202,8 @@ func (c *City) String() string {
 }
 
 func CitySearch(term string) []string {
-	if debug {
-		// fmt.Printf("\nsearching by [%s]\n", term)
+	if *debug {
+		fmt.Printf("\nsearching by [%s]\n", term)
 	}
 
 	cityIndex, _ := bleve.Open("city.bleve")
@@ -224,8 +222,8 @@ func CitySearch(term string) []string {
 		fmt.Println(err)
 	}
 
-	if debug {
-		//fmt.Printf("\n%s\n", searchResults)
+	if *debug {
+		fmt.Printf("\n%s\n", searchResults)
 	}
 
 	var names = make([]string, 0, 0)
@@ -247,7 +245,7 @@ func CitySearch(term string) []string {
 		}
 	}
 
-	if debug {
+	if *debug {
 		fmt.Println()
 		for _, n := range names {
 			fmt.Printf("[%s]\n", n)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
 	"path/filepath"
@@ -12,11 +13,14 @@ import (
 	"github.com/peterh/liner"
 )
 
+var debug = flag.Bool("debug", true, "verbose debug statements")
+
 var historyFn = filepath.Join(os.TempDir(), ".liner_history")
 
 var healthCheck = filepath.Join(os.TempDir(), ".health_check")
 
 func main() {
+	flag.Parse()
 	// IndexCity()
 
 	line := liner.NewLiner()
@@ -48,6 +52,7 @@ func main() {
 			for _, cmd := range commands {
 				if cmd.verb == tokens[0] {
 					f := cmd.action
+
 					if len(tokens) > 0 {
 						f(tokens[1:])
 					} else {
