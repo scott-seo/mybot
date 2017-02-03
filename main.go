@@ -12,6 +12,8 @@ import (
 
 var historyFn = filepath.Join(os.TempDir(), ".liner_history")
 
+var healthCheck = filepath.Join(os.TempDir(), ".health_check")
+
 func main() {
 	// IndexCity()
 

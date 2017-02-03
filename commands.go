@@ -46,6 +46,12 @@ var commands []command = []command{
 		google,
 		nil,
 	},
+	command{
+		"alert",
+		[]string{"warning, info"},
+		alert,
+		nil,
+	},
 }
 
 func google(args []string) {
@@ -59,6 +65,10 @@ func gmail(args []string) {
 
 func hello(args []string) {
 	fmt.Println(args[0])
+}
+
+func alert(args []string) {
+	go bashcmd([]string{"afplay", "./missile_alert.mp3"})
 }
 
 func bashcmd(args []string) {
