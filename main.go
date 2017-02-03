@@ -7,6 +7,8 @@ import (
 
 	"strings"
 
+	"time"
+
 	"github.com/peterh/liner"
 )
 
@@ -30,9 +32,11 @@ func main() {
 	next:
 		var command string
 		var err error
+		commandLineCmd := false
 
 		if len(os.Args) > 1 {
 			command = strings.Join(os.Args[1:], " ")
+			commandLineCmd = true
 		} else {
 			command, err = line.Prompt("mybot> ")
 		}
@@ -49,11 +53,18 @@ func main() {
 					} else {
 						f([]string{})
 					}
+					if commandLineCmd {
+						time.Sleep(time.Second * 5)
+						goto end
+					}
+					if cmd.verb == "go" {
+						time.Sleep(time.Second * 10)
+					}
 					goto next
 				}
 			}
 
-			bashcmd(tokens)
+			// bashcmd(tokens)
 
 			if len(os.Args) > 1 {
 				goto end
