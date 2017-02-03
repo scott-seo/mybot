@@ -48,7 +48,7 @@ var commands []command = []command{
 	},
 	command{
 		"alert",
-		[]string{"warning, info"},
+		[]string{"warning", "info"},
 		alert,
 		nil,
 	},
@@ -68,7 +68,7 @@ func hello(args []string) {
 }
 
 func alert(args []string) {
-	go bashcmd([]string{"afplay", "./missile_alert.mp3"})
+	go bashcmd([]string{"afplay", fmt.Sprintf("./alert_%s.mp3", args[0])})
 }
 
 func bashcmd(args []string) {

@@ -32,7 +32,16 @@ func WordCompleter(line string, pos int) (head string, completions []string, tai
 				return prefix, command.secWordComplete(strings.Join(terms[1:], " ")), ""
 			}
 
-			return prefix, command.targets, ""
+			result := []string{}
+			sTerm := strings.Join(terms[1:], " ")
+
+			for _, t := range command.targets {
+				if strings.HasPrefix(t, sTerm) {
+					n := strings.Replace(t, sTerm, "", -1)
+					result = append(result, n)
+				}
+			}
+			return prefix, result, ""
 		}
 	}
 
