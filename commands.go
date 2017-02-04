@@ -20,12 +20,14 @@ type command struct {
 
 var commands = []command{}
 
-var memory = make(map[string]string)
+var memory = make(map[string]map[string]string)
 
 // this is interesting if the initilization was done at variable assignment
 // go complains about initialization loop but
 // in init it does not
 func init() {
+	memory["__default"] = make(map[string]string)
+
 	commands = []command{
 		command{
 			"hello",
@@ -131,10 +133,23 @@ func alert(args []string) {
 	}
 }
 
-// put <key> <value> cmd...
+// put <key> <field> <value> cmd...
 func put(args []string) {
+	start := -1
+	key := "__default"
 
-	memory[args[0]] = args[1]
+	if len(args) == 3 {
+		start = 0
+		key := args[start]
+	}
+
+	field := args[start+1]
+	value := args[start+2]
+
+	if memory[key] == nil {
+		memory[key] = make(map[string]string)
+	}
+
 	fmt.Println(memory)
 
 	// call chained command
@@ -203,6 +218,34 @@ func healthcheck(args []string) {
 
 	if stdout {
 		fmt.Printf("status code = %s \n", value)
+	}
+
+	if *debug {
+		fmt.Println(args)
+	}
+
+	// call chained command
+	if len(args) > 1 {
+		executeNextIfAny(args[nextTermPost:])
+	}
+}
+
+// remap <map_name> |
+func remap(args []string) {
+	var stdout = true
+	var key = args[0]
+	var value = memory[key]
+	var hasNext = len(args) > 1
+	var nextTermPost = 1
+
+	if hasNext && args[1] == "|" {
+		stdout = false
+		nextTermPost = 2
+		args = insert(args, value, nextTermPost+1)
+	}
+
+	if stdout {
+		fmt.Printf("new value = %s \n", value)
 	}
 
 	if *debug {
