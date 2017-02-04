@@ -26,8 +26,6 @@ var memory = make(map[string]map[string]string)
 // go complains about initialization loop but
 // in init it does not
 func init() {
-	memory["__default"] = make(map[string]string)
-
 	commands = []command{
 		command{
 			"hello",
@@ -107,6 +105,12 @@ func init() {
 			get,
 			nil,
 		},
+		command{
+			"map",
+			[]string{},
+			remap,
+			nil,
+		},
 	}
 }
 
@@ -135,26 +139,25 @@ func alert(args []string) {
 
 // put <key> <field> <value> cmd...
 func put(args []string) {
-	start := -1
-	key := "__default"
+	hasNext := len(args) > 3
+	nextTermPost := 3
 
-	if len(args) == 3 {
-		start = 0
-		key := args[start]
-	}
-
-	field := args[start+1]
-	value := args[start+2]
+	key := args[0]
+	field := args[1]
+	value := args[2]
 
 	if memory[key] == nil {
 		memory[key] = make(map[string]string)
 	}
+	m := memory[key]
+
+	m[field] = value
 
 	fmt.Println(memory)
 
 	// call chained command
-	if len(args) > 2 {
-		executeNextIfAny(args[2:])
+	if hasNext {
+		executeNextIfAny(args[nextTermPost:])
 	}
 }
 
@@ -162,18 +165,25 @@ func insert(a []string, x string, i int) []string {
 	return append(a[:i], append([]string{x}, a[i:]...)...)
 }
 
-// get <key> cmd...
+// get <[key]> <field>
 func get(args []string) {
 	var stdout = true
 	var key = args[0]
-	var value = memory[key]
-	var hasNext = len(args) > 1
-	var nextTermPost = 1
+	var field = args[1]
+	var hasNext = len(args) > 2
+	var nextTermPos = 2
 
-	if hasNext && args[1] == "|" {
+	var value = memory[key][field]
+
+	if *debug {
+		fmt.Printf("args = %s \n", args)
+		fmt.Printf("stdout = %v \n", stdout)
+	}
+
+	if hasNext && args[2] == "|" {
 		stdout = false
-		nextTermPost = 2
-		args = insert(args, value, nextTermPost+1)
+		nextTermPos = 3
+		args = insert(args, value, nextTermPos+1)
 	}
 
 	if *debug {
@@ -187,7 +197,7 @@ func get(args []string) {
 
 	// call chained command
 	if hasNext {
-		executeNextIfAny(args[nextTermPost:])
+		executeNextIfAny(args[nextTermPos:])
 	}
 }
 
@@ -195,7 +205,8 @@ func graph(args []string) {
 	bashcmd([]string{"open", "-a", "Google Chrome", "./graph.svg"})
 }
 
-// healthcheck <url> |
+// healthcheck <url> | <nextTerm>
+//              0    1     2
 func healthcheck(args []string) {
 	var stdout = true
 	var url = args[0]
@@ -217,7 +228,7 @@ func healthcheck(args []string) {
 	}
 
 	if stdout {
-		fmt.Printf("status code = %s \n", value)
+		fmt.Println(value)
 	}
 
 	if *debug {
@@ -225,27 +236,28 @@ func healthcheck(args []string) {
 	}
 
 	// call chained command
-	if len(args) > 1 {
+	if hasNext {
 		executeNextIfAny(args[nextTermPost:])
 	}
 }
 
-// remap <map_name> |
+// remap <key> <field> | <nextTerm> <value>
 func remap(args []string) {
-	var stdout = true
-	var key = args[0]
-	var value = memory[key]
-	var hasNext = len(args) > 1
-	var nextTermPost = 1
+	stdout := true
+	key := args[0]
+	field := args[1]
+	value := memory[key][field]
+	hasNext := len(args) > 2
+	nextTermPos := 2
 
-	if hasNext && args[1] == "|" {
+	if hasNext && args[2] == "|" {
 		stdout = false
-		nextTermPost = 2
-		args = insert(args, value, nextTermPost+1)
+		nextTermPos = 3
+		args = insert(args, value, nextTermPos+1)
 	}
 
 	if stdout {
-		fmt.Printf("new value = %s \n", value)
+		fmt.Printf("out = %s \n", value)
 	}
 
 	if *debug {
@@ -253,8 +265,8 @@ func remap(args []string) {
 	}
 
 	// call chained command
-	if len(args) > 1 {
-		executeNextIfAny(args[nextTermPost:])
+	if hasNext {
+		executeNextIfAny(args[nextTermPos:])
 	}
 }
 
