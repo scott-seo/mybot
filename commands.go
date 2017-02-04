@@ -161,6 +161,10 @@ func alert(arg string) {
 
 // put <key> <field> <value> cmd...
 func put(arg string) {
+	if len(arg) < 3 {
+		return
+	}
+
 	args := strings.Split(arg, " ")
 
 	hasNext := len(args) > 3
@@ -179,7 +183,7 @@ func put(arg string) {
 
 	if *debug {
 		// fmt.Println(memory)
-		fmt.Println("=> put " + value)
+		fmt.Printf("=> put %s %s %s\n", key, field, value)
 	}
 
 	// call chained command
@@ -226,13 +230,20 @@ func graph(arg string) {
 	bashcmd([]string{"open", "-a", "Google Chrome", "./graph.svg"})
 }
 
+func transpose(s string) string {
+	if strings.HasPrefix(s, "$") {
+		return memory["default"][s[1:]]
+	}
+	return s
+}
+
 // healthcheck <url> | <nextTerm>
 //              0    1     2
 func healthcheck(arg string) {
 	args := strings.Split(arg, " ")
 
 	required := 1
-	url := args[0]
+	url := transpose(args[0])
 	value := ""
 
 	if *debug {
@@ -244,7 +255,8 @@ func healthcheck(arg string) {
 		fmt.Println(err)
 	}
 
-	value = fmt.Sprintf("%d", resp.StatusCode)
+	value = strconv.Itoa(resp.StatusCode)
+
 	if *debug {
 		fmt.Printf("   %s\n", value)
 	}
@@ -254,7 +266,9 @@ func healthcheck(arg string) {
 		print(args[required+1:])
 		executeNextIfAny(args[required+1:])
 	} else {
-		fmt.Println(value)
+		if !*debug {
+			fmt.Println(value)
+		}
 	}
 }
 
@@ -295,10 +309,13 @@ func wait(arg string) {
 	seconds, err := strconv.Atoi(args[0])
 	if err != nil {
 		fmt.Printf("expecting number but got % instead \n", args[0])
+		return
 	}
 
 	// execute wait
-	// fmt.Printf("wating %d seconds \n", seconds)
+	if *debug {
+		fmt.Printf("=> wait %d\n", seconds)
+	}
 	time.Sleep(time.Second * time.Duration(seconds))
 
 	// call chained command

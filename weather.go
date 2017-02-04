@@ -16,8 +16,10 @@ import (
 
 func init() {
 	cityIndex, err := bleve.Open("./city.bleve")
-	if err == nil {
+	if *debug {
 		fmt.Println("Existing index found")
+	}
+	if err == nil {
 		return
 	}
 
@@ -155,6 +157,7 @@ type WeatherData struct {
 }
 
 func (w WeatherData) String() string {
+	bashcmd([]string{"say", fmt.Sprintf(`"weather in %s is now %.2f degrees"`, w.Name, w.Main.Temp)})
 	return fmt.Sprintf("name = %s\ntemperature = %.1f", w.Name, w.Main.Temp)
 }
 
