@@ -13,8 +13,8 @@ import (
 
 type command struct {
 	verb            string
-	targets         []string
-	action          func([]string)
+	choices         []string
+	action          func(string)
 	secWordComplete func(string) []string
 }
 
@@ -29,7 +29,7 @@ func init() {
 	commands = []command{
 		command{
 			"hello",
-			[]string{"foo", "bar"},
+			[]string{"foo", "bar", "world"},
 			hello,
 			nil,
 		},
@@ -95,13 +95,13 @@ func init() {
 		},
 		command{
 			"put",
-			[]string{},
+			[]string{"default"},
 			put,
 			nil,
 		},
 		command{
 			"get",
-			[]string{},
+			[]string{"default"},
 			get,
 			nil,
 		},
@@ -111,25 +111,47 @@ func init() {
 			remap,
 			nil,
 		},
+		command{
+			"debug",
+			[]string{},
+			setdebug,
+			nil,
+		},
+		command{
+			"echo",
+			[]string{},
+			echo,
+			nil,
+		},
 	}
 }
 
-func google(args []string) {
+func google(arg string) {
+	args := strings.Split(arg, " ")
 	q := strings.Join(args, "+")
 	bashcmd([]string{"open", "-a", "Google Chrome", fmt.Sprintf("https://www.google.com/#q=%s", q)})
 }
 
-func gmail(args []string) {
+func gmail(arg string) {
 	bashcmd([]string{"open", "-a", "Google Chrome", "https://mail.google.com"})
 }
 
-func hello(args []string) {
-	fmt.Println("hello " + strings.Join(args[0:], " "))
+func hello(arg string) {
+	fmt.Println("hello " + arg)
+}
+
+func echo(arg string) {
+	fmt.Println(arg)
 }
 
 // alert [warning|info|end]
-func alert(args []string) {
-	go bashcmd([]string{"afplay", fmt.Sprintf("./alert_%s.mp3", args[0])})
+func alert(arg string) {
+	if len(arg) == 0 {
+		return
+	}
+	args := strings.Split(arg, " ")
+
+	go bashcmd([]string{"afplay", fmt.Sprintf("./alert_%s.mp3", arg)})
 
 	// call chained command
 	if len(args) > 1 {
@@ -138,7 +160,9 @@ func alert(args []string) {
 }
 
 // put <key> <field> <value> cmd...
-func put(args []string) {
+func put(arg string) {
+	args := strings.Split(arg, " ")
+
 	hasNext := len(args) > 3
 	nextTermPost := 3
 
@@ -153,7 +177,10 @@ func put(args []string) {
 
 	m[field] = value
 
-	fmt.Println(memory)
+	if *debug {
+		// fmt.Println(memory)
+		fmt.Println("=> put " + value)
+	}
 
 	// call chained command
 	if hasNext {
@@ -165,54 +192,52 @@ func insert(a []string, x string, i int) []string {
 	return append(a[:i], append([]string{x}, a[i:]...)...)
 }
 
-// get <[key]> <field>
-func get(args []string) {
-	var stdout = true
-	var key = args[0]
-	var field = args[1]
-	var hasNext = len(args) > 2
-	var nextTermPos = 2
-
-	var value = memory[key][field]
-
+func print(args []string) {
 	if *debug {
-		fmt.Printf("args = %s \n", args)
-		fmt.Printf("stdout = %v \n", stdout)
-	}
-
-	if hasNext && args[2] == "|" {
-		stdout = false
-		nextTermPos = 3
-		args = insert(args, value, nextTermPos+1)
-	}
-
-	if *debug {
-		fmt.Printf("args = %s \n", args)
-		fmt.Printf("stdout = %v \n", stdout)
-	}
-
-	if stdout {
-		fmt.Println(value)
-	}
-
-	// call chained command
-	if hasNext {
-		executeNextIfAny(args[nextTermPos:])
+		fmt.Printf("   next = %s \n", args)
 	}
 }
 
-func graph(args []string) {
+// get <key> <field> [|]
+func get(arg string) {
+	args := strings.Split(arg, " ")
+
+	required := 2
+	key := args[0]
+	field := args[1]
+	value := memory[key][field]
+
+	if *debug {
+		fmt.Printf("=> get %s %s\n", key, field)
+		fmt.Printf("   %s\n", value)
+	}
+
+	if len(args) > required && args[2] == "|" {
+		args = insert(args, value, required+2)
+		print(args[required+1:])
+		executeNextIfAny(args[required+1:])
+	} else {
+		fmt.Println(value)
+	}
+
+}
+
+func graph(arg string) {
 	bashcmd([]string{"open", "-a", "Google Chrome", "./graph.svg"})
 }
 
 // healthcheck <url> | <nextTerm>
 //              0    1     2
-func healthcheck(args []string) {
-	var stdout = true
-	var url = args[0]
-	var value = ""
-	var hasNext = len(args) > 1
-	var nextTermPost = 1
+func healthcheck(arg string) {
+	args := strings.Split(arg, " ")
+
+	required := 1
+	url := args[0]
+	value := ""
+
+	if *debug {
+		fmt.Printf("=> healthcheck %s\n", url)
+	}
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -220,29 +245,23 @@ func healthcheck(args []string) {
 	}
 
 	value = fmt.Sprintf("%d", resp.StatusCode)
-
-	if hasNext && args[1] == "|" {
-		stdout = false
-		nextTermPost = 2
-		args = insert(args, value, nextTermPost+1)
-	}
-
-	if stdout {
-		fmt.Println(value)
-	}
-
 	if *debug {
-		fmt.Println(args)
+		fmt.Printf("   %s\n", value)
 	}
 
-	// call chained command
-	if hasNext {
-		executeNextIfAny(args[nextTermPost:])
+	if len(args) > required && args[1] == "|" {
+		args = insert(args, value, required+2)
+		print(args[required+1:])
+		executeNextIfAny(args[required+1:])
+	} else {
+		fmt.Println(value)
 	}
 }
 
 // remap <key> <field> | <nextTerm> <value>
-func remap(args []string) {
+func remap(arg string) {
+	args := strings.Split(arg, " ")
+
 	stdout := true
 	key := args[0]
 	field := args[1]
@@ -270,8 +289,9 @@ func remap(args []string) {
 	}
 }
 
-// wait <seconds> <cmd> <args>
-func wait(args []string) {
+// wait <seconds> | <cmd> <arg>
+func wait(arg string) {
+	args := strings.Split(arg, " ")
 	seconds, err := strconv.Atoi(args[0])
 	if err != nil {
 		fmt.Printf("expecting number but got % instead \n", args[0])
@@ -290,43 +310,70 @@ func wait(args []string) {
 func executeNextIfAny(args []string) {
 	if len(args) > 0 {
 		cmd := findCommand(args[0])
-		cmd.action(args[1:])
+		if cmd != nil {
+			cmd.action(strings.Join(args[1:], " "))
+		}
 	}
 }
 
 // goroutine <chained commands>
-func goroutine(args []string) {
+func goroutine(arg string) {
+	args := strings.Split(arg, " ")
+
 	// call chained command
 	if len(args) > 0 {
 		cmd := findCommand(args[0])
-
-		go cmd.action(args[1:])
+		if cmd != nil {
+			go cmd.action(strings.Join(args[1:], " "))
+		}
 	}
 }
 
 // repeat <count> <cmd> <args>
-func repeat(args []string) {
+func repeat(arg string) {
+	args := strings.Split(arg, " ")
 	count, err := strconv.Atoi(args[0])
 	if err != nil {
-		fmt.Printf("expecting number but got % instead \n", args[0])
+		fmt.Printf("expecting number but got %s instead \n", args[0])
 	}
 
 	cmd := findCommand(args[1])
+	if cmd == nil {
+		return
+	}
 
 	for i := 0; i < count; i++ {
-		cmd.action(args[2:])
+		cmd.action(strings.Join(args[2:], " "))
 	}
 }
 
-func findCommand(verb string) command {
+func findCommand(verb string) *command {
 
 	for _, cmd := range commands {
 		if cmd.verb == verb {
-			return cmd
+			return &cmd
 		}
 	}
 
-	return command{}
+	return nil
+}
+
+func setdebug(arg string) {
+	if len(arg) == 0 {
+		fmt.Println(*debug)
+		return
+	}
+
+	switch arg {
+	case "true":
+		*debug = true
+	case "false":
+		*debug = false
+	case "on":
+		*debug = true
+	case "off":
+		*debug = false
+	}
 }
 
 func bashcmd(args []string) {

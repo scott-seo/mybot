@@ -158,7 +158,9 @@ func (w WeatherData) String() string {
 	return fmt.Sprintf("name = %s\ntemperature = %.1f", w.Name, w.Main.Temp)
 }
 
-func WeatherAction(args []string) {
+func WeatherAction(arg string) {
+	args := strings.Split(arg, " ")
+
 	//cityId := "5133268"
 	city := strings.Join(args[0:], "%20")
 

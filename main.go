@@ -13,7 +13,7 @@ import (
 	"github.com/peterh/liner"
 )
 
-var debug = flag.Bool("debug", true, "verbose debug statements")
+var debug = flag.Bool("debug", true, "debugging")
 
 var historyFn = filepath.Join(os.TempDir(), ".liner_history")
 
@@ -51,12 +51,12 @@ func main() {
 			tokens := strings.Split(command, " ")
 			for _, cmd := range commands {
 				if cmd.verb == tokens[0] {
-					f := cmd.action
+					action := cmd.action
 
 					if len(tokens) > 0 {
-						f(tokens[1:])
+						action(strings.Join(tokens[1:], " "))
 					} else {
-						f([]string{})
+						action("")
 					}
 					if commandLineCmd {
 						time.Sleep(time.Second * 5)

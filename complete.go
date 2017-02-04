@@ -35,7 +35,7 @@ func WordCompleter(line string, pos int) (head string, completions []string, tai
 			result := []string{}
 			sTerm := strings.Join(terms[1:], " ")
 
-			for _, t := range command.targets {
+			for _, t := range command.choices {
 				if strings.HasPrefix(t, sTerm) {
 					n := strings.Replace(t, sTerm, "", -1)
 					result = append(result, n)
