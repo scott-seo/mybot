@@ -93,12 +93,6 @@ func init() {
 			nil,
 		},
 		command{
-			"go",
-			[]string{},
-			goroutine,
-			nil,
-		},
-		command{
 			"put",
 			[]string{"default"},
 			put,
@@ -220,7 +214,7 @@ func alert(arg string) {
 		fmt.Printf("   afplay alert_%s.mp3\n", arg)
 	}
 
-	go bashcmd([]string{"afplay", fmt.Sprintf("./alert_%s.mp3", arg)})
+	bashcmd([]string{"afplay", fmt.Sprintf("./alert_%s.mp3", arg)})
 
 	// call chained command
 	if len(args) > 1 {
@@ -371,19 +365,6 @@ func executeNextIfAny(args []string) {
 	}
 }
 
-// goroutine <chained commands>
-func goroutine(arg string) {
-	args := strings.Split(arg, " ")
-
-	// call chained command
-	if len(args) > 0 {
-		cmd := findCommand(args[0])
-		if cmd != nil {
-			go cmd.action(strings.Join(args[1:], " "))
-		}
-	}
-}
-
 func monitor(arg string) {
 	args := strings.Split(arg, " ")
 
@@ -426,9 +407,8 @@ func registerMonitor(id int, interval int, args []string) {
 				return
 			}
 
-			// call chained command
 			if len(args) > 1 {
-				executeNextIfAny(args[1:])
+				executeNextIfAny(args)
 			}
 
 			time.Sleep(time.Second * time.Duration(interval))
