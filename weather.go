@@ -16,9 +16,6 @@ import (
 
 func init() {
 	cityIndex, err := bleve.Open("./city.bleve")
-	if *debug {
-		fmt.Println("Existing index found")
-	}
 	if err == nil {
 		return
 	}

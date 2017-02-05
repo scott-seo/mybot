@@ -134,6 +134,18 @@ func init() {
 			monitor,
 			nil,
 		},
+		command{
+			"blackhole",
+			[]string{},
+			blackhole,
+			nil,
+		},
+		command{
+			"if",
+			[]string{},
+			ifStatement,
+			nil,
+		},
 	}
 }
 
@@ -152,7 +164,48 @@ func hello(arg string) {
 }
 
 func echo(arg string) {
-	fmt.Println(arg)
+	args := strings.Split(arg, " ")
+
+	value := args[0]
+	required := 1
+
+	if len(args) > required && args[1] == "|" {
+		args = insert(args, value, required+2)
+		print(args[required+1:])
+		executeNextIfAny(args[required+1:])
+	} else {
+		fmt.Println(value)
+	}
+}
+
+func blackhole(arg string) {
+	if *debug {
+		fmt.Println("=> blackhole")
+	}
+}
+
+func ifStatement(arg string) {
+	args := strings.Split(arg, " ")
+	required := 2
+
+	left := args[0]
+	right := args[1]
+
+	equals := left == right
+
+	not := strings.HasPrefix(right, "!")
+
+	if *debug {
+		fmt.Printf("%s == %s", left, right)
+	}
+
+	if len(args) > required && args[2] == "|" {
+		if (not && !equals) || equals {
+			print(args[required+1:])
+			executeNextIfAny(args[required+1:])
+		}
+	}
+
 }
 
 // alert [warning|info|end]
