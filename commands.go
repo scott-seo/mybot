@@ -23,8 +23,9 @@ var commands = []command{}
 var memory = make(map[string]map[string]string)
 
 var monitors = make(map[int]bool)
+var monitorsDetail = make(map[int]string)
 
-var monitorID int = 0
+var monitorID int
 
 // this is interesting if the initilization was done at variable assignment
 // go complains about initialization loop but
@@ -129,7 +130,7 @@ func init() {
 		},
 		command{
 			"monitor",
-			[]string{},
+			[]string{"add", "remove", "ls"},
 			monitor,
 			nil,
 		},
@@ -359,13 +360,39 @@ func goroutine(arg string) {
 func monitor(arg string) {
 	args := strings.Split(arg, " ")
 
-	interval, _ := strconv.Atoi(args[0])
-	monitorID++
-	monitors[monitorID] = true
+	// monitor off 1
+	switch args[0] {
+	case "remove":
+		id, _ := strconv.Atoi(args[1])
+		for k := range monitors {
+			if id == k {
+				monitors[k] = false
+				delete(monitors, k)
+				delete(monitorsDetail, k)
+			}
+		}
+		return
+	case "add":
+		interval, _ := strconv.Atoi(args[1])
+		monitorID++
+		monitors[monitorID] = true
+		registerMonitor(monitorID, interval, args[2:])
+		monitorsDetail[monitorID] = strings.Join(args[2:], " ")
+		return
+	case "ls":
+		for k, v := range monitorsDetail {
+			fmt.Printf("[%d] %s\n", k, v)
+		}
+		return
+	}
+
+}
+
+func registerMonitor(monitorID int, interval int, args []string) {
 
 	go func() {
 		for {
-			fmt.Printf("checking for monitor id %d, %t \n", monitorID, monitors[monitorID])
+			fmt.Printf("\nrunning monitor [%d], %t \n", monitorID, monitors[monitorID])
 			if !monitors[monitorID] {
 				return
 			}
@@ -378,7 +405,6 @@ func monitor(arg string) {
 			time.Sleep(time.Second * time.Duration(interval))
 		}
 	}()
-
 }
 
 // repeat <count> <cmd> <args>
