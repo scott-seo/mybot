@@ -169,6 +169,11 @@ func echo(arg string) {
 	value := args[0]
 	required := 1
 
+	if *debug {
+		fmt.Printf("=> echo %s\n", value)
+		fmt.Printf("   %s\n", value)
+	}
+
 	if len(args) > required && args[1] == "|" {
 		args = insert(args, value, required+2)
 		print(args[required+1:])
@@ -192,15 +197,16 @@ func ifStatement(arg string) {
 	right := args[1]
 
 	equals := left == right
-
 	not := strings.HasPrefix(right, "!")
+	result := (not && !equals) || equals
 
 	if *debug {
-		fmt.Printf("%s == %s", left, right)
+		fmt.Printf("=> if %s == %s\n", left, right)
+		fmt.Printf("   %t\n", result)
 	}
 
 	if len(args) > required && args[2] == "|" {
-		if (not && !equals) || equals {
+		if result {
 			print(args[required+1:])
 			executeNextIfAny(args[required+1:])
 		}
@@ -214,6 +220,11 @@ func alert(arg string) {
 		return
 	}
 	args := strings.Split(arg, " ")
+
+	if *debug {
+		fmt.Printf("=> alert %s\n", arg)
+		fmt.Printf("   afplay alert_%s.mp3\n", arg)
+	}
 
 	go bashcmd([]string{"afplay", fmt.Sprintf("./alert_%s.mp3", arg)})
 
@@ -262,7 +273,7 @@ func insert(a []string, x string, i int) []string {
 
 func print(args []string) {
 	if *debug {
-		fmt.Printf("   next = %s \n", args)
+		fmt.Printf("   next = %s \n\n", args)
 	}
 }
 
@@ -429,8 +440,8 @@ func monitor(arg string) {
 		interval, _ := strconv.Atoi(args[1])
 		monitorID++
 		monitors[monitorID] = true
-		registerMonitor(monitorID, interval, args[2:])
 		monitorsDetail[monitorID] = strings.Join(args[2:], " ")
+		registerMonitor(monitorID, interval, args[2:])
 		return
 	case "ls":
 		for k, v := range monitorsDetail {
@@ -441,12 +452,14 @@ func monitor(arg string) {
 
 }
 
-func registerMonitor(monitorID int, interval int, args []string) {
+func registerMonitor(id int, interval int, args []string) {
 
 	go func() {
 		for {
-			fmt.Printf("\nrunning monitor [%d], %t \n", monitorID, monitors[monitorID])
-			if !monitors[monitorID] {
+			if *debug {
+				fmt.Printf("\n[%d] %s \n", id, monitorsDetail[id])
+			}
+			if !monitors[id] {
 				return
 			}
 
