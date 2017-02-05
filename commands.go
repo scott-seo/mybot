@@ -22,6 +22,10 @@ var commands = []command{}
 
 var memory = make(map[string]map[string]string)
 
+var monitors = make(map[int]bool)
+
+var monitorID int = 0
+
 // this is interesting if the initilization was done at variable assignment
 // go complains about initialization loop but
 // in init it does not
@@ -121,6 +125,12 @@ func init() {
 			"echo",
 			[]string{},
 			echo,
+			nil,
+		},
+		command{
+			"monitor",
+			[]string{},
+			monitor,
 			nil,
 		},
 	}
@@ -344,6 +354,31 @@ func goroutine(arg string) {
 			go cmd.action(strings.Join(args[1:], " "))
 		}
 	}
+}
+
+func monitor(arg string) {
+	args := strings.Split(arg, " ")
+
+	interval, _ := strconv.Atoi(args[0])
+	monitorID++
+	monitors[monitorID] = true
+
+	go func() {
+		for {
+			fmt.Printf("checking for monitor id %d, %t \n", monitorID, monitors[monitorID])
+			if !monitors[monitorID] {
+				return
+			}
+
+			// call chained command
+			if len(args) > 1 {
+				executeNextIfAny(args[1:])
+			}
+
+			time.Sleep(time.Second * time.Duration(interval))
+		}
+	}()
+
 }
 
 // repeat <count> <cmd> <args>
