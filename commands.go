@@ -111,12 +111,6 @@ func init() {
 			nil,
 		},
 		command{
-			"map",
-			[]string{},
-			remap,
-			nil,
-		},
-		command{
 			"debug",
 			[]string{},
 			setdebug,
@@ -344,37 +338,6 @@ func healthcheck(arg string) {
 		if !*debug {
 			fmt.Println(value)
 		}
-	}
-}
-
-// remap <key> <field> | <nextTerm> <value>
-func remap(arg string) {
-	args := strings.Split(arg, " ")
-
-	stdout := true
-	key := args[0]
-	field := args[1]
-	value := memory[key][field]
-	hasNext := len(args) > 2
-	nextTermPos := 2
-
-	if hasNext && args[2] == "|" {
-		stdout = false
-		nextTermPos = 3
-		args = insert(args, value, nextTermPos+1)
-	}
-
-	if stdout {
-		fmt.Printf("out = %s \n", value)
-	}
-
-	if *debug {
-		fmt.Println(args)
-	}
-
-	// call chained command
-	if hasNext {
-		executeNextIfAny(args[nextTermPos:])
 	}
 }
 
