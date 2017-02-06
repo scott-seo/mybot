@@ -1,14 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 
 	"strings"
-
-	"time"
 
 	"github.com/peterh/liner"
 )
@@ -20,6 +20,9 @@ var historyFn = filepath.Join(os.TempDir(), ".liner_history")
 var healthCheck = filepath.Join(os.TempDir(), ".health_check")
 
 func main() {
+	args := os.Args
+	lines := []string{}
+
 	flag.Parse()
 	// IndexCity()
 
@@ -31,57 +34,68 @@ func main() {
 		line.ReadHistory(f)
 		f.Close()
 	}
+	fileProcessed := false
 
 	for {
 	next:
 		var command string
 		var err error
-		commandLineCmd := false
 
-		if len(os.Args) > 1 {
-			command = strings.Join(os.Args[1:], " ")
-			commandLineCmd = true
+		if !fileProcessed && strings.Contains(args[0], "mybot") && len(args) > 1 && (strings.HasPrefix(args[1], ".") || strings.HasPrefix(args[1], "/")) {
+			file, err := os.Open(args[1])
+			if err == nil {
+				scanner := bufio.NewScanner(file)
+				buf := make([]byte, 0, 64*1024)
+				scanner.Buffer(buf, 2*1024*1024)
+
+				for scanner.Scan() {
+					s := scanner.Text()
+					lines = append(lines, s)
+				}
+			} else {
+				fmt.Println(err)
+			}
+			file.Close()
 		} else {
 			command, err = line.Prompt("mybot> ")
+			lines = append(lines, command)
 		}
 
-		if err == nil {
-			line.AppendHistory(command)
+		for _, currCmd := range lines {
+			if err == nil {
+				line.AppendHistory(currCmd)
 
-			tokens := strings.Split(command, " ")
-			for _, cmd := range commands {
-				if cmd.verb == tokens[0] {
-					action := cmd.action
+				tokens := strings.Split(currCmd, " ")
+				for _, cmd := range commands {
+					if cmd.verb == tokens[0] {
+						action := cmd.action
 
-					if len(tokens) > 0 {
-						action(strings.Join(tokens[1:], " "))
-					} else {
-						action("")
+						if len(tokens) > 0 {
+							action(strings.Join(tokens[1:], " "))
+						} else {
+							action("")
+						}
 					}
-					if commandLineCmd {
-						time.Sleep(time.Second * 5)
-						goto end
-					}
-					if cmd.verb == "go" {
-						time.Sleep(time.Second * 10)
-					}
-					goto next
 				}
-			}
 
-			// bashcmd(tokens)
+				// bashcmd(tokens)
 
-			if len(os.Args) > 1 {
+				// if len(os.Args) > 1 {
+				// 	goto end
+				// }
+
+			} else if err == liner.ErrPromptAborted {
+				log.Print("Aborted")
+				goto end
+			} else {
+				log.Print("Error reading line: ", err)
 				goto end
 			}
-
-		} else if err == liner.ErrPromptAborted {
-			log.Print("Aborted")
-			goto end
-		} else {
-			// log.Print("Error reading line: ", err)
-			goto end
 		}
+		lines = []string{}
+		fileProcessed = true
+
+		goto next
 	}
 
 end:
