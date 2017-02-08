@@ -169,6 +169,7 @@ func piped(required int, args []string, value string) bool {
 
 func echo(arg string) {
 	// required := 1
+	args := []string{}
 
 	endPos := strings.Index(arg, "|")
 
@@ -178,11 +179,12 @@ func echo(arg string) {
 	firstQ := strings.Index(arg[0:endPos], `"`)
 	secondQ := strings.LastIndex(arg[0:endPos], `"`)
 	value := arg[firstQ+1 : secondQ]
-	args := strings.Split(arg[secondQ+2:], " ")
+	args = strings.Split(strings.Trim(arg[secondQ+1:], " "), " ")
 
 	if *debug {
 		fmt.Printf("=> echo \"%s\"\n", value)
 		fmt.Printf("   %s\n", value)
+		// fmt.Printf("   %s\n", args)
 	}
 
 	if piped := piped(0, args, "\""+value+"\""); !piped {

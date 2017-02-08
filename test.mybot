@@ -1,8 +1,11 @@
 #!/usr/bin/env mybot
+
 debug off
-echo hello
+
+echo "health check on yahoo"
 
 put default yahoo http://www.yahoo.com
 
-debug on
-healthcheck $yahoo | if 200 | echo it_is_up
+healthcheck $yahoo | if 200 | echo "it's up" | say
+
+exit

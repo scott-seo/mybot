@@ -66,6 +66,11 @@ func main() {
 				line.AppendHistory(currCmd)
 
 				tokens := strings.Split(currCmd, " ")
+
+				if "exit" == tokens[0] {
+					goto end
+				}
+
 				for _, cmd := range commands {
 					if cmd.verb == tokens[0] {
 						action := cmd.action
