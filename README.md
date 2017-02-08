@@ -1,6 +1,6 @@
 # Learning go by working on a pet project
 
-There are many awesome tools like hubot but I wanted to create my own bot. My bot, no pun intended, is an automation bot that is designed to run on desktops.
+There are many awesome tools like hubot but I wanted to create my own bot. My bot, no pun intended, is an automation bot that is designed to run on desktops (currently Mac OSX only).
 
 You get to play sound, make the bot talk out loud, pop up browsers. Any bot can do the same but the desktop environment is the target platform.
 
