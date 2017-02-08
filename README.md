@@ -1,32 +1,43 @@
 # Learning go by working on a pet project
 
-There are many awesome tools like hubot but I wanted to create my own bot. My bot, no pun intended, is automation bot that is designed to run on a desktop.
+There are many awesome tools like hubot but I wanted to create my own bot. My bot, no pun intended, is an automation bot that is designed to run on desktops.
 
-You get to use play sound, make the bot talk out loud, pop up a browser. Any bot can do the same but the desktop environment is the focal point in designing.
+You get to play sound, make the bot talk out loud, pop up browsers. Any bot can do the same but the desktop environment is the target platform.
 
-Here is the list of things I have implemented so far.
+Here is the list of commands I have implemented so far.
 
-weather
+* weather
 
-ssh
+* ssh
 
-gmail
+* gmail
 
-google seach
+* google seach
 
-alert
+* alert
 
-graph
+* graph
 
-health check
+* health check
 
-wait 
+* wait 
 
-monitor
+* monitor
 
-repeat
+* repeat
 
-debug
+* debug
 
 # Mini scripting language
 ![mini scripting language](https://github.com/scott-seo/mybot/raw/master/scripting.png "Scripting")
+
+# Installation 
+```
+go get github.com/scott-seo/mybot
+go build && ./mybot
+```
+
+# Running scripts
+```
+./test.mybot
+```
