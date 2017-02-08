@@ -18,6 +18,8 @@ Here is the list of commands I have implemented so far.
 
 * graph
 
+* if
+
 * health check
 
 * wait 
