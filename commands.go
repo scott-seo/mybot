@@ -134,6 +134,12 @@ func init() {
 			ifStatement,
 			nil,
 		},
+		command{
+			"say",
+			[]string{},
+			say,
+			nil,
+		},
 	}
 }
 
@@ -151,24 +157,44 @@ func hello(arg string) {
 	fmt.Println("hello " + arg)
 }
 
-func echo(arg string) {
-	args := strings.Split(arg, " ")
-
-	value := args[0]
-	required := 1
-
-	if *debug {
-		fmt.Printf("=> echo %s\n", value)
-		fmt.Printf("   %s\n", value)
-	}
-
-	if len(args) > required && args[1] == "|" {
+func piped(required int, args []string, value string) bool {
+	if len(args) > required && args[required] == "|" {
 		args = insert(args, value, required+2)
 		print(args[required+1:])
 		executeNextIfAny(args[required+1:])
-	} else {
+		return true
+	}
+	return false
+}
+
+func echo(arg string) {
+	// required := 1
+	args := []string{}
+
+	endPos := strings.Index(arg, "|")
+
+	if endPos == -1 {
+		endPos = len(arg)
+	}
+	firstQ := strings.Index(arg[0:endPos], `"`)
+	secondQ := strings.LastIndex(arg[0:endPos], `"`)
+	value := arg[firstQ+1 : secondQ]
+	args = strings.Split(strings.Trim(arg[secondQ+1:], " "), " ")
+
+	if *debug {
+		fmt.Printf("=> echo \"%s\"\n", value)
+		fmt.Printf("   %s\n", value)
+		// fmt.Printf("   %s\n", args)
+	}
+
+	if piped := piped(0, args, "\""+value+"\""); !piped {
 		fmt.Println(value)
 	}
+
+}
+
+func say(arg string) {
+	bashcmd([]string{"say", arg})
 }
 
 func blackhole(arg string) {
@@ -261,7 +287,7 @@ func insert(a []string, x string, i int) []string {
 
 func print(args []string) {
 	if *debug {
-		fmt.Printf("   next = %s \n\n", args)
+		fmt.Printf("   next=> %s \n\n", args)
 	}
 }
 
@@ -279,11 +305,7 @@ func get(arg string) {
 		fmt.Printf("   %s\n", value)
 	}
 
-	if len(args) > required && args[2] == "|" {
-		args = insert(args, value, required+2)
-		print(args[required+1:])
-		executeNextIfAny(args[required+1:])
-	} else {
+	if piped := piped(required, args, value); !piped {
 		fmt.Println(value)
 	}
 
@@ -324,14 +346,8 @@ func healthcheck(arg string) {
 		fmt.Printf("   %s\n", value)
 	}
 
-	if len(args) > required && args[1] == "|" {
-		args = insert(args, value, required+2)
-		print(args[required+1:])
-		executeNextIfAny(args[required+1:])
-	} else {
-		if !*debug {
-			fmt.Println(value)
-		}
+	if piped := piped(required, args, value); !piped {
+		fmt.Println(value)
 	}
 }
 
@@ -340,7 +356,7 @@ func wait(arg string) {
 	args := strings.Split(arg, " ")
 	seconds, err := strconv.Atoi(args[0])
 	if err != nil {
-		fmt.Printf("expecting number but got % instead \n", args[0])
+		fmt.Printf("expecting number but got %v instead \n", args[0])
 		return
 	}
 
@@ -446,11 +462,6 @@ func findCommand(verb string) *command {
 }
 
 func setdebug(arg string) {
-	if len(arg) == 0 {
-		fmt.Println(*debug)
-		return
-	}
-
 	switch arg {
 	case "true":
 		*debug = true
@@ -460,6 +471,12 @@ func setdebug(arg string) {
 		*debug = true
 	case "off":
 		*debug = false
+	default:
+		value := "off"
+		if *debug {
+			value = "on"
+		}
+		fmt.Println(value)
 	}
 }
 
