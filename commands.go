@@ -214,7 +214,7 @@ func alert(arg string) {
 		fmt.Printf("   afplay alert_%s.mp3\n", arg)
 	}
 
-	bashcmd([]string{"afplay", fmt.Sprintf("./alert_%s.mp3", arg)})
+	bashcmd([]string{"afplay", fmt.Sprintf("./alerts/alert_%s.mp3", arg)})
 
 	// call chained command
 	if len(args) > 1 {
