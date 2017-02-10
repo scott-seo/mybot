@@ -41,7 +41,7 @@ func init() {
 		command{
 			"ssh",
 			[]string{},
-			SSHAction,
+			tools.SSHAction,
 			nil,
 		},
 		command{

@@ -199,7 +199,7 @@ func CitySearch(term string) []string {
 		fmt.Printf("\nsearching by [%s]\n", term)
 	}
 
-	cityIndex, _ := bleve.Open("city.bleve")
+	cityIndex, _ := bleve.Open("./weather/city.bleve")
 
 	if cityIndex == nil {
 		fmt.Println("cityIndex is nil")

@@ -92,7 +92,7 @@ func main() {
 				log.Print("Aborted")
 				goto end
 			} else {
-				log.Print("Error reading line: ", err)
+				fmt.Println("exit")
 				goto end
 			}
 		}
