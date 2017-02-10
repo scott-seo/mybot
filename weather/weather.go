@@ -1,4 +1,4 @@
-package main
+package weather
 
 import (
 	"bufio"
@@ -13,7 +13,10 @@ import (
 	"strings"
 
 	"github.com/blevesearch/bleve"
+	"github.com/scott-seo/mybot/tools"
 )
+
+var debug *bool
 
 const banner = `███╗   ███╗██╗   ██╗██████╗  ██████╗ ████████╗
 ████╗ ████║╚██╗ ██╔╝██╔══██╗██╔═══██╗╚══██╔══╝
@@ -24,7 +27,10 @@ const banner = `███╗   ███╗██╗   ██╗█████�
 `
 
 func init() {
-	index, err := bleve.Open("./city.bleve")
+	b := true
+	debug = &b
+
+	index, err := bleve.Open("./weather/city.bleve")
 	if err == nil {
 		return
 	}
@@ -32,7 +38,7 @@ func init() {
 	fmt.Println(banner)
 	fmt.Println("Loading cities and creating text search index. Time to complete is 16 seconds")
 	mapping := bleve.NewIndexMapping()
-	index, err = bleve.New("city.bleve", mapping)
+	index, err = bleve.New("./weather/city.bleve", mapping)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -40,7 +46,7 @@ func init() {
 
 	// index some data
 	// file, err := os.Open("/Users/seos/src/github.com/scott-seo/mybot/city.list.us.json")
-	file, err := os.Open("./city.list.us.json")
+	file, err := os.Open("./weather/city.list.us.json")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -138,11 +144,11 @@ type WeatherData struct {
 }
 
 func (w WeatherData) String() string {
-	bashcmd([]string{"say", fmt.Sprintf(`"weather in %s is now %.2f degrees"`, w.Name, w.Main.Temp)})
+	tools.Bashcmd([]string{"say", fmt.Sprintf(`"weather in %s is now %.2f degrees"`, w.Name, w.Main.Temp)})
 	return fmt.Sprintf("name = %s\ntemperature = %.1f", w.Name, w.Main.Temp)
 }
 
-func WeatherAction(arg string) {
+func Action(arg string) {
 
 	args := strings.Split(arg, " ")
 

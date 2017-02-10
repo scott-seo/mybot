@@ -1,14 +1,14 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"log"
 	"net/http"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/scott-seo/mybot/tools"
+	"github.com/scott-seo/mybot/weather"
 )
 
 type command struct {
@@ -47,8 +47,8 @@ func init() {
 		command{
 			"weather",
 			[]string{},
-			WeatherAction,
-			CitySearch,
+			weather.Action,
+			weather.CitySearch,
 		},
 		command{
 			"gmail",
@@ -146,11 +146,11 @@ func init() {
 func google(arg string) {
 	args := strings.Split(arg, " ")
 	q := strings.Join(args, "+")
-	bashcmd([]string{"open", "-a", "Google Chrome", fmt.Sprintf("https://www.google.com/#q=%s", q)})
+	tools.Bashcmd([]string{"open", "-a", "Google Chrome", fmt.Sprintf("https://www.google.com/#q=%s", q)})
 }
 
 func gmail(arg string) {
-	bashcmd([]string{"open", "-a", "Google Chrome", "https://mail.google.com"})
+	tools.Bashcmd([]string{"open", "-a", "Google Chrome", "https://mail.google.com"})
 }
 
 func hello(arg string) {
@@ -194,7 +194,7 @@ func echo(arg string) {
 }
 
 func say(arg string) {
-	bashcmd([]string{"say", arg})
+	tools.Bashcmd([]string{"say", arg})
 }
 
 func blackhole(arg string) {
@@ -240,7 +240,7 @@ func alert(arg string) {
 		fmt.Printf("   afplay alert_%s.mp3\n", arg)
 	}
 
-	bashcmd([]string{"afplay", fmt.Sprintf("./alerts/alert_%s.mp3", arg)})
+	tools.Bashcmd([]string{"afplay", fmt.Sprintf("./alerts/alert_%s.mp3", arg)})
 
 	// call chained command
 	if len(args) > 1 {
@@ -312,7 +312,7 @@ func get(arg string) {
 }
 
 func graph(arg string) {
-	bashcmd([]string{"open", "-a", "Google Chrome", "./graph.svg"})
+	tools.Bashcmd([]string{"open", "-a", "Google Chrome", "./graph.svg"})
 }
 
 func transpose(s string) string {
@@ -477,34 +477,5 @@ func setdebug(arg string) {
 			value = "on"
 		}
 		fmt.Println(value)
-	}
-}
-
-func bashcmd(args []string) {
-	_, err := exec.LookPath(args[0])
-	if err != nil {
-		fmt.Printf("command [%s] not found \n", args[0])
-		return
-	}
-
-	cmd := exec.Command(args[0], args[1:]...)
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-	if err := cmd.Start(); err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	scanner := bufio.NewScanner(stdout)
-	for scanner.Scan() {
-		fmt.Println(scanner.Text())
-	}
-
-	if err := cmd.Wait(); err != nil {
-		log.Fatal(err)
 	}
 }

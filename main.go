@@ -24,7 +24,6 @@ func main() {
 	lines := []string{}
 
 	flag.Parse()
-	// IndexCity()
 
 	line := liner.NewLiner()
 	defer line.Close()
