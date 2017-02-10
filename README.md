@@ -31,7 +31,7 @@ Here is the list of commands I have implemented so far. I haven't implmented man
 * debug
 
 # Mini scripting language
-![mini scripting language](https://github.com/scott-seo/mybot/raw/master/scripting.png "Scripting")
+![mini scripting language](https://github.com/scott-seo/mybot/raw/master/asset/scripting.png "Scripting")
 
 # Installation 
 ```

@@ -11,14 +11,30 @@ import (
 	"github.com/scott-seo/mybot/weather"
 )
 
-type command struct {
+type Command struct {
 	verb            string
 	choices         []string
 	action          func(string)
 	secWordComplete func(string) []string
 }
 
-var commands = []command{}
+func (c Command) Verb() string {
+	return c.verb
+}
+
+func (c Command) Choices() []string {
+	return c.choices
+}
+
+func (c Command) ActionFunc() func(string) {
+	return c.action
+}
+
+func (c Command) SecWordCompleteFunc() func(string) []string {
+	return c.secWordComplete
+}
+
+var Commands = []tools.Command{}
 
 var memory = make(map[string]map[string]string)
 
@@ -31,110 +47,110 @@ var monitorID int
 // go complains about initialization loop but
 // in init it does not
 func init() {
-	commands = []command{
-		command{
+	Commands = []tools.Command{
+		Command{
 			"hello",
 			[]string{"foo", "bar", "world"},
 			hello,
 			nil,
 		},
-		command{
+		Command{
 			"ssh",
 			[]string{},
 			tools.SSHAction,
 			nil,
 		},
-		command{
+		Command{
 			"weather",
 			[]string{},
 			weather.Action,
 			weather.CitySearch,
 		},
-		command{
+		Command{
 			"gmail",
 			[]string{},
 			gmail,
 			nil,
 		},
-		command{
+		Command{
 			"google",
 			[]string{},
 			google,
 			nil,
 		},
-		command{
+		Command{
 			"alert",
 			[]string{"warning", "info", "end"},
 			alert,
 			nil,
 		},
-		command{
+		Command{
 			"graph",
 			[]string{"warning", "info", "end"},
 			graph,
 			nil,
 		},
-		command{
+		Command{
 			"healthcheck",
 			[]string{},
 			healthcheck,
 			nil,
 		},
-		command{
+		Command{
 			"repeat",
 			[]string{},
 			repeat,
 			nil,
 		},
-		command{
+		Command{
 			"wait",
 			[]string{},
 			wait,
 			nil,
 		},
-		command{
+		Command{
 			"put",
 			[]string{"default"},
 			put,
 			nil,
 		},
-		command{
+		Command{
 			"get",
 			[]string{"default"},
 			get,
 			nil,
 		},
-		command{
+		Command{
 			"debug",
 			[]string{},
 			setdebug,
 			nil,
 		},
-		command{
+		Command{
 			"echo",
 			[]string{},
 			echo,
 			nil,
 		},
-		command{
+		Command{
 			"monitor",
 			[]string{"add", "remove", "ls"},
 			monitor,
 			nil,
 		},
-		command{
+		Command{
 			"blackhole",
 			[]string{},
 			blackhole,
 			nil,
 		},
-		command{
+		Command{
 			"if",
 			[]string{},
 			ifStatement,
 			nil,
 		},
-		command{
+		Command{
 			"say",
 			[]string{},
 			say,
@@ -450,11 +466,12 @@ func repeat(arg string) {
 	}
 }
 
-func findCommand(verb string) *command {
+func findCommand(verb string) *Command {
 
-	for _, cmd := range commands {
-		if cmd.verb == verb {
-			return &cmd
+	for _, cmd := range Commands {
+		if cmd.Verb() == verb {
+			c := cmd.(Command)
+			return &c
 		}
 	}
 

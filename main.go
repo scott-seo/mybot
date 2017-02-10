@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/peterh/liner"
+	"github.com/scott-seo/mybot/tools"
 )
 
 var debug = flag.Bool("debug", true, "debugging")
@@ -28,7 +29,10 @@ func main() {
 	line := liner.NewLiner()
 	defer line.Close()
 	line.SetCtrlCAborts(true)
-	line.SetWordCompleter(WordCompleter)
+
+	s := tools.NewSession(Commands)
+
+	line.SetWordCompleter(s.WordCompleter)
 	if f, err := os.Open(historyFn); err == nil {
 		line.ReadHistory(f)
 		f.Close()
@@ -70,9 +74,9 @@ func main() {
 					goto end
 				}
 
-				for _, cmd := range commands {
-					if cmd.verb == tokens[0] {
-						action := cmd.action
+				for _, cmd := range Commands {
+					if cmd.Verb() == tokens[0] {
+						action := cmd.ActionFunc()
 
 						if len(tokens) > 0 {
 							action(strings.Join(tokens[1:], " "))
