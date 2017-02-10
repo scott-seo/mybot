@@ -11,26 +11,26 @@ import (
 	"github.com/scott-seo/mybot/weather"
 )
 
-type Command struct {
+type SimpleCommand struct {
 	verb            string
 	choices         []string
 	action          func(string)
 	secWordComplete func(string) []string
 }
 
-func (c Command) Verb() string {
+func (c SimpleCommand) Verb() string {
 	return c.verb
 }
 
-func (c Command) Choices() []string {
+func (c SimpleCommand) Choices() []string {
 	return c.choices
 }
 
-func (c Command) ActionFunc() func(string) {
+func (c SimpleCommand) ActionFunc() func(string) {
 	return c.action
 }
 
-func (c Command) SecWordCompleteFunc() func(string) []string {
+func (c SimpleCommand) SecWordCompleteFunc() func(string) []string {
 	return c.secWordComplete
 }
 
@@ -48,109 +48,109 @@ var monitorID int
 // in init it does not
 func init() {
 	Commands = []tools.Command{
-		Command{
+		SimpleCommand{
 			"hello",
 			[]string{"foo", "bar", "world"},
 			hello,
 			nil,
 		},
-		Command{
+		SimpleCommand{
 			"ssh",
 			[]string{},
 			tools.SSHAction,
 			nil,
 		},
-		Command{
+		SimpleCommand{
 			"weather",
 			[]string{},
 			weather.Action,
 			weather.CitySearch,
 		},
-		Command{
+		SimpleCommand{
 			"gmail",
 			[]string{},
 			gmail,
 			nil,
 		},
-		Command{
+		SimpleCommand{
 			"google",
 			[]string{},
 			google,
 			nil,
 		},
-		Command{
+		SimpleCommand{
 			"alert",
 			[]string{"warning", "info", "end"},
 			alert,
 			nil,
 		},
-		Command{
+		SimpleCommand{
 			"graph",
 			[]string{"warning", "info", "end"},
 			graph,
 			nil,
 		},
-		Command{
+		SimpleCommand{
 			"healthcheck",
 			[]string{},
 			healthcheck,
 			nil,
 		},
-		Command{
+		SimpleCommand{
 			"repeat",
 			[]string{},
 			repeat,
 			nil,
 		},
-		Command{
+		SimpleCommand{
 			"wait",
 			[]string{},
 			wait,
 			nil,
 		},
-		Command{
+		SimpleCommand{
 			"put",
 			[]string{"default"},
 			put,
 			nil,
 		},
-		Command{
+		SimpleCommand{
 			"get",
 			[]string{"default"},
 			get,
 			nil,
 		},
-		Command{
+		SimpleCommand{
 			"debug",
 			[]string{},
 			setdebug,
 			nil,
 		},
-		Command{
+		SimpleCommand{
 			"echo",
 			[]string{},
 			echo,
 			nil,
 		},
-		Command{
+		SimpleCommand{
 			"monitor",
 			[]string{"add", "remove", "ls"},
 			monitor,
 			nil,
 		},
-		Command{
+		SimpleCommand{
 			"blackhole",
 			[]string{},
 			blackhole,
 			nil,
 		},
-		Command{
+		SimpleCommand{
 			"if",
 			[]string{},
 			ifStatement,
 			nil,
 		},
-		Command{
+		SimpleCommand{
 			"say",
 			[]string{},
 			say,
@@ -328,7 +328,7 @@ func get(arg string) {
 }
 
 func graph(arg string) {
-	tools.Bashcmd([]string{"open", "-a", "Google Chrome", "./graph.svg"})
+	tools.Bashcmd([]string{"open", "-a", "Google Chrome", "./asset/graph.svg"})
 }
 
 func transpose(s string) string {
@@ -466,11 +466,11 @@ func repeat(arg string) {
 	}
 }
 
-func findCommand(verb string) *Command {
+func findCommand(verb string) *SimpleCommand {
 
 	for _, cmd := range Commands {
 		if cmd.Verb() == verb {
-			c := cmd.(Command)
+			c := cmd.(SimpleCommand)
 			return &c
 		}
 	}
