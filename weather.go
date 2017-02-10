@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 
 	"os"
@@ -14,15 +15,24 @@ import (
 	"github.com/blevesearch/bleve"
 )
 
+const banner = `███╗   ███╗██╗   ██╗██████╗  ██████╗ ████████╗
+████╗ ████║╚██╗ ██╔╝██╔══██╗██╔═══██╗╚══██╔══╝
+██╔████╔██║ ╚████╔╝ ██████╔╝██║   ██║   ██║   
+██║╚██╔╝██║  ╚██╔╝  ██╔══██╗██║   ██║   ██║   
+██║ ╚═╝ ██║   ██║   ██████╔╝╚██████╔╝   ██║   
+╚═╝     ╚═╝   ╚═╝   ╚═════╝  ╚═════╝    ╚═╝   
+`
+
 func init() {
-	cityIndex, err := bleve.Open("./city.bleve")
+	index, err := bleve.Open("./city.bleve")
 	if err == nil {
 		return
 	}
 
-	fmt.Println("Reindexing")
+	fmt.Println(banner)
+	fmt.Println("Loading cities and creating text search index. Time to complete is 16 seconds")
 	mapping := bleve.NewIndexMapping()
-	cityIndex, err = bleve.New("city.bleve", mapping)
+	index, err = bleve.New("city.bleve", mapping)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -36,80 +46,54 @@ func init() {
 		return
 	}
 
-	cityChan := make(chan City, 1)
-	done := make(chan bool)
+	loadCity(index, file)
 
-	go cityIndxer(cityChan, cityIndex, done)
+	fmt.Println("Done")
 
-	go readJson(file, cityChan)
-
-	<-done
-
-	fmt.Println("json file processing completed")
-
-	err = cityIndex.Close()
+	err = index.Close()
 	if err != nil {
 		fmt.Println(err)
 	}
 }
 
 // json file reader
-func readJson(file *os.File, cityChan chan City) {
+func loadCity(index bleve.Index, file *os.File) {
 	scanner := bufio.NewScanner(file)
 	buf := make([]byte, 0, 64*1024)
 	scanner.Buffer(buf, 2*1024*1024)
 
-	fmt.Println("opening file" + file.Name())
-
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		// go routine the json unmarshalling
-		// go func(cityBytes []byte) {
-		// fmt.Println(string(cityBytes))
-
 		cityPtr := new(City)
 		json.Unmarshal(data, &cityPtr)
-
-		// fmt.Printf("json = %s\n", cityPtr.Name)
-		cityChan <- *cityPtr
-		// }(data)
+		cityIndxer(index, cityPtr)
 	}
 
-	close(cityChan)
 }
 
-func cityIndxer(cityChan chan City, index bleve.Index, done chan bool) {
-	for {
-		city, more := <-cityChan
-		if *debug {
-			fmt.Printf("indexing %d, %s ", city.ID, city.Name)
-		}
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-		if more {
-			// go func() {
-			doc := struct {
-				Id   string
-				Name string
-			}{
-				Id:   string(city.ID),
-				Name: city.Name,
-			}
+func randomString(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
 
-			err := index.Index(string(city.ID), doc)
+func cityIndxer(index bleve.Index, city *City) {
+	doc := struct {
+		cityid int64
+		Name   string
+	}{
+		cityid: city.ID,
+		Name:   city.Name,
+	}
 
-			if *debug {
-				fmt.Print(">\n")
-			}
-
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			// }()
-		} else {
-			done <- true
-			return
-		}
+	err := index.Index(randomString(5), doc)
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 }
 
@@ -159,6 +143,7 @@ func (w WeatherData) String() string {
 }
 
 func WeatherAction(arg string) {
+
 	args := strings.Split(arg, " ")
 
 	//cityId := "5133268"
@@ -225,7 +210,7 @@ func CitySearch(term string) []string {
 	}
 
 	if *debug {
-		fmt.Printf("\n%s\n", searchResults)
+		// fmt.Printf("\n%s\n", searchResults)
 	}
 
 	var names = make([]string, 0, 0)
@@ -237,7 +222,7 @@ func CitySearch(term string) []string {
 		}
 		for _, f := range doc.Fields {
 			switch f.Name() {
-			case "name":
+			case "Name":
 				name := string(f.Value())
 				if strings.HasPrefix(name, term) {
 					n := strings.Replace(name, term, "", -1)
