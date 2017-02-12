@@ -16,6 +16,7 @@ type SimpleCommand struct {
 	choices         []string
 	action          func(string)
 	secWordComplete func(string) []string
+	usage           string
 }
 
 func (c SimpleCommand) Verb() string {
@@ -53,109 +54,141 @@ func init() {
 			[]string{"foo", "bar", "world"},
 			hello,
 			nil,
+			"[foo|bar|world]",
 		},
 		SimpleCommand{
 			"ssh",
 			[]string{},
 			tools.SSHAction,
 			nil,
+			"[user] [host] [\"command\"]",
 		},
 		SimpleCommand{
 			"weather",
 			[]string{},
 			weather.Action,
 			weather.CitySearch,
+			"[City Name]",
 		},
 		SimpleCommand{
 			"gmail",
 			[]string{},
 			gmail,
 			nil,
+			"",
 		},
 		SimpleCommand{
 			"google",
 			[]string{},
 			google,
 			nil,
+			"[search term]",
 		},
 		SimpleCommand{
 			"alert",
 			[]string{"warning", "info", "end"},
 			alert,
 			nil,
+			"[warning | info | end]",
 		},
 		SimpleCommand{
 			"graph",
 			[]string{"warning", "info", "end"},
 			graph,
 			nil,
+			"",
 		},
 		SimpleCommand{
 			"healthcheck",
 			[]string{},
 			healthcheck,
 			nil,
+			"[url]",
 		},
 		SimpleCommand{
 			"repeat",
 			[]string{},
 			repeat,
 			nil,
+			"[number of execution]",
 		},
 		SimpleCommand{
 			"wait",
 			[]string{},
 			wait,
 			nil,
+			"[time in seconds]",
 		},
 		SimpleCommand{
 			"put",
 			[]string{"default"},
 			put,
 			nil,
+			"[key] [field] [value]",
 		},
 		SimpleCommand{
 			"get",
 			[]string{"default"},
 			get,
 			nil,
+			"[key] [field]",
 		},
 		SimpleCommand{
 			"debug",
 			[]string{},
 			setdebug,
 			nil,
+			"[on|off]",
 		},
 		SimpleCommand{
 			"echo",
 			[]string{},
 			echo,
 			nil,
+			"[message wrapped in double quotes]",
 		},
 		SimpleCommand{
 			"monitor",
 			[]string{"add", "remove", "ls"},
 			monitor,
 			nil,
+			"[add | remove | ls]",
 		},
 		SimpleCommand{
 			"blackhole",
 			[]string{},
 			blackhole,
 			nil,
+			"",
 		},
 		SimpleCommand{
 			"if",
 			[]string{},
 			ifStatement,
 			nil,
+			"[value to compare with redirected input]",
 		},
 		SimpleCommand{
 			"say",
 			[]string{},
 			say,
 			nil,
+			"[message]",
 		},
+		SimpleCommand{
+			"help",
+			[]string{},
+			help,
+			nil,
+			"",
+		},
+	}
+}
+
+func help(args string) {
+	for _, cmd := range Commands {
+		c := cmd.(SimpleCommand)
+		fmt.Printf("  %-15s%-15s\n", c.verb, c.usage)
 	}
 }
 
@@ -184,7 +217,21 @@ func piped(required int, args []string, value string) bool {
 }
 
 func echo(arg string) {
-	// required := 1
+	if strings.Trim(arg, " ") == "" {
+		fmt.Println()
+		return
+	}
+
+	if !strings.Contains(arg, "\"") {
+		pos := strings.Index(arg, "|")
+		if pos > 0 {
+			arg = `"` + arg[0:pos-1] + `"` + arg[pos:]
+		} else {
+			arg = `"` + arg + `"`
+		}
+
+	}
+
 	args := []string{}
 
 	endPos := strings.Index(arg, "|")
@@ -192,6 +239,7 @@ func echo(arg string) {
 	if endPos == -1 {
 		endPos = len(arg)
 	}
+
 	firstQ := strings.Index(arg[0:endPos], `"`)
 	secondQ := strings.LastIndex(arg[0:endPos], `"`)
 	value := arg[firstQ+1 : secondQ]
