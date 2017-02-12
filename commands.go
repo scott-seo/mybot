@@ -2,13 +2,17 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"os"
+
 	"github.com/scott-seo/mybot/tools"
 	"github.com/scott-seo/mybot/weather"
+	"golang.org/x/net/websocket"
 )
 
 type SimpleCommand struct {
@@ -179,6 +183,13 @@ func init() {
 			"help",
 			[]string{},
 			help,
+			nil,
+			"",
+		},
+		SimpleCommand{
+			"slack",
+			[]string{"on", "off"},
+			slack,
 			nil,
 			"",
 		},
@@ -542,5 +553,47 @@ func setdebug(arg string) {
 			value = "on"
 		}
 		fmt.Println(value)
+	}
+}
+
+var ws *websocket.Conn
+var id string
+
+func slack(arg string) {
+	if arg == "on" && ws == nil {
+		ws, id = tools.SlackConnect(os.Getenv("SLACK_BOT_TOKEN"))
+
+		go func() {
+			for {
+				// read each incoming message
+				m, err := tools.GetMessage(ws)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				// d, _ := json.MarshalIndent(m, "", " ")
+				// fmt.Println(string(d))
+
+				// see if we're mentioned
+				if m.Type == "message" && strings.HasPrefix(m.Text, "<@"+id+">") {
+
+					parts := strings.Fields(m.Text)
+					fmt.Printf("\nuser : %s\n", strings.Join(parts[1:], " "))
+					if len(parts) > 1 {
+						executeNextIfAny(parts[1:])
+					}
+
+					m.Text = strings.Join(tools.ExecutionHist, "\n")
+					// fmt.Printf("mybot: %s\n", m.Text)
+					tools.PostMessage(ws, m)
+				}
+			}
+		}()
+	}
+
+	if arg == "off" && ws != nil {
+		go func() {
+			ws.Close()
+		}()
 	}
 }

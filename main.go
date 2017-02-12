@@ -92,6 +92,8 @@ func main() {
 				// 	goto end
 				// }
 
+				tools.ExecutionHist = []string{}
+
 			} else if err == liner.ErrPromptAborted {
 				log.Print("Aborted")
 				goto end

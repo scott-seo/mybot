@@ -145,7 +145,7 @@ type WeatherData struct {
 
 func (w WeatherData) String() string {
 	tools.Bashcmd([]string{"say", fmt.Sprintf(`"weather in %s is now %.2f degrees"`, w.Name, w.Main.Temp)})
-	return fmt.Sprintf("name = %s\ntemperature = %.1f", w.Name, w.Main.Temp)
+	return fmt.Sprintf("city : %s\ntemp : %.1f", w.Name, w.Main.Temp)
 }
 
 func Action(arg string) {
@@ -176,6 +176,8 @@ func Action(arg string) {
 	weather := new(WeatherData)
 
 	json.Unmarshal(data, &weather)
+
+	tools.ExecutionHist = append(tools.ExecutionHist, weather.String())
 
 	fmt.Println(weather)
 }

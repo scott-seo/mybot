@@ -17,6 +17,8 @@ func NewSession(commands []Command) Session {
 	return Session{commands}
 }
 
+var ExecutionHist []string = make([]string, 0)
+
 func (s Session) WordCompleter(line string, pos int) (head string, completions []string, tail string) {
 
 	prefix := line[0:pos]
