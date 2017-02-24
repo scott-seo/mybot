@@ -79,7 +79,8 @@ func main() {
 						action := cmd.ActionFunc()
 
 						if len(tokens) > 0 {
-							action(strings.Join(tokens[1:], " "))
+							output := action(strings.Join(tokens[1:], " "))
+							fmt.Print(output)
 						} else {
 							action("")
 						}

@@ -148,7 +148,7 @@ func (w WeatherData) String() string {
 	return fmt.Sprintf("city : %s\ntemp : %.1f", w.Name, w.Main.Temp)
 }
 
-func Action(arg string) {
+func Action(arg string) string {
 
 	args := strings.Split(arg, " ")
 
@@ -163,14 +163,12 @@ func Action(arg string) {
 	resp, err := http.Get(fmt.Sprintf("http://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s&units=imperial", city, appId))
 
 	if err != nil {
-		fmt.Println(err)
-		return
+		return fmt.Sprintln(err)
 	}
 
 	data, err := ioutil.ReadAll(bufio.NewReader(resp.Body))
 	if err != nil {
-		fmt.Println(err)
-		return
+		return fmt.Sprintln(err)
 	}
 
 	weather := new(WeatherData)
@@ -179,7 +177,7 @@ func Action(arg string) {
 
 	tools.ExecutionHist = append(tools.ExecutionHist, weather.String())
 
-	fmt.Println(weather)
+	return fmt.Sprintln(weather)
 }
 
 type City struct {

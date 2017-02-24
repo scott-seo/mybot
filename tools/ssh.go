@@ -96,11 +96,11 @@ func SSH(user string, hostname string, cmd string) string {
 	}
 }
 
-func SSHAction(arg string) {
+func SSHAction(arg string) string {
 	args := strings.Split(arg, " ")
 	user := strings.Split(args[0], "@")[0]
 	host := strings.Split(args[0], "@")[1]
 	cmd := strings.Replace(strings.Join(args[1:], " "), `"`, "", -1)
 	s := SSH(user, host, cmd)
-	fmt.Println(s)
+	return s
 }

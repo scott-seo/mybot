@@ -18,7 +18,7 @@ import (
 type SimpleCommand struct {
 	verb            string
 	choices         []string
-	action          func(string)
+	action          func(string) string
 	secWordComplete func(string) []string
 	usage           string
 }
@@ -31,7 +31,7 @@ func (c SimpleCommand) Choices() []string {
 	return c.choices
 }
 
-func (c SimpleCommand) ActionFunc() func(string) {
+func (c SimpleCommand) ActionFunc() func(string) string {
 	return c.action
 }
 
@@ -196,41 +196,50 @@ func init() {
 	}
 }
 
-func help(args string) {
+func help(args string) string {
+	var output string
 	for _, cmd := range Commands {
 		c := cmd.(SimpleCommand)
-		fmt.Printf("  %-15s%-15s\n", c.verb, c.usage)
+		output += fmt.Sprintf("  %-15s%-15s\n", c.verb, c.usage)
 	}
+	return output
 }
 
-func google(arg string) {
+func google(arg string) string {
 	args := strings.Split(arg, " ")
 	q := strings.Join(args, "+")
 	tools.Bashcmd([]string{"open", "-a", "Google Chrome", fmt.Sprintf("https://www.google.com/#q=%s", q)})
+	return ""
 }
 
-func gmail(arg string) {
+func gmail(arg string) string {
 	tools.Bashcmd([]string{"open", "-a", "Google Chrome", "https://mail.google.com"})
+	return ""
 }
 
-func hello(arg string) {
-	fmt.Println("hello " + arg)
+func hello(arg string) string {
+	return "hello " + arg
 }
 
-func piped(required int, args []string, value string) bool {
+func piped(required int, args []string, value string) (bool, string) {
+	var output string
 	if len(args) > required && args[required] == "|" {
 		args = insert(args, value, required+2)
-		print(args[required+1:])
-		executeNextIfAny(args[required+1:])
-		return true
+		if *debug {
+			output += dformat(strings.Join(args[required+1:], " ")) + "\n"
+		}
+
+		output += executeNextIfAny(args[required+1:])
+		return false, output
 	}
-	return false
+	return false, output
 }
 
-func echo(arg string) {
+func echo(arg string) string {
+	var output string
+
 	if strings.Trim(arg, " ") == "" {
-		fmt.Println()
-		return
+		return "\n"
 	}
 
 	if !strings.Contains(arg, "\"") {
@@ -240,7 +249,6 @@ func echo(arg string) {
 		} else {
 			arg = `"` + arg + `"`
 		}
-
 	}
 
 	args := []string{}
@@ -257,28 +265,33 @@ func echo(arg string) {
 	args = strings.Split(strings.Trim(arg[secondQ+1:], " "), " ")
 
 	if *debug {
-		fmt.Printf("=> echo \"%s\"\n", value)
-		fmt.Printf("   %s\n", value)
+		output += dformat(fmt.Sprintf("echo \"%s\"\n", value))
+		output += dformat(fmt.Sprintf("%s\n", value))
 		// fmt.Printf("   %s\n", args)
 	}
 
-	if piped := piped(0, args, "\""+value+"\""); !piped {
-		fmt.Println(value)
+	if piped, s := piped(0, args, "\""+value+"\""); !piped {
+		output += value + "\n"
+		output += s
 	}
 
+	return output
 }
 
-func say(arg string) {
+func say(arg string) string {
 	tools.Bashcmd([]string{"say", arg})
+	return "say " + arg
 }
 
-func blackhole(arg string) {
+func blackhole(arg string) string {
 	if *debug {
-		fmt.Println("=> blackhole")
+		return dformat("blackhole\n")
 	}
+	return ""
 }
 
-func ifStatement(arg string) {
+func ifStatement(arg string) string {
+	var output string
 	args := strings.Split(arg, " ")
 	required := 2
 
@@ -290,43 +303,47 @@ func ifStatement(arg string) {
 	result := (not && !equals) || equals
 
 	if *debug {
-		fmt.Printf("=> if %s == %s\n", left, right)
-		fmt.Printf("   %t\n", result)
+		output += dformat(fmt.Sprintf("if %s == %s is %t\n", left, right, result))
 	}
 
 	if len(args) > required && args[2] == "|" {
 		if result {
-			print(args[required+1:])
-			executeNextIfAny(args[required+1:])
+			output += fmt.Sprintf("if %s == %s is %t\n", left, right, result)
+			output += executeNextIfAny(args[required+1:])
 		}
 	}
 
+	return output
 }
 
 // alert [warning|info|end]
-func alert(arg string) {
+func alert(arg string) string {
+	var output string
 	if len(arg) == 0 {
-		return
+		return ""
 	}
 	args := strings.Split(arg, " ")
 
 	if *debug {
-		fmt.Printf("=> alert %s\n", arg)
-		fmt.Printf("   afplay alert_%s.mp3\n", arg)
+		output += dformat(fmt.Sprintf("=> alert %s\n", arg))
+		output += dformat(fmt.Sprintf("   afplay alert_%s.mp3\n", arg))
 	}
 
 	tools.Bashcmd([]string{"afplay", fmt.Sprintf("./alerts/alert_%s.mp3", arg)})
 
 	// call chained command
 	if len(args) > 1 {
-		executeNextIfAny(args[1:])
+		output += executeNextIfAny(args[1:])
 	}
+
+	return output
 }
 
 // put <key> <field> <value> cmd...
-func put(arg string) {
+func put(arg string) string {
+	var output string
 	if len(arg) < 3 {
-		return
+		return ""
 	}
 
 	args := strings.Split(arg, " ")
@@ -345,29 +362,28 @@ func put(arg string) {
 
 	m[field] = value
 
+	output += "put " + fmt.Sprintf("%s %s %s\n", key, field, value)
+
 	if *debug {
 		// fmt.Println(memory)
-		fmt.Printf("=> put %s %s %s\n", key, field, value)
+		output += dformat(fmt.Sprintf("put %s %s %s\n", key, field, value))
 	}
 
 	// call chained command
 	if hasNext {
-		executeNextIfAny(args[nextTermPost:])
+		output += executeNextIfAny(args[nextTermPost:])
 	}
+
+	return output
 }
 
 func insert(a []string, x string, i int) []string {
 	return append(a[:i], append([]string{x}, a[i:]...)...)
 }
 
-func print(args []string) {
-	if *debug {
-		fmt.Printf("   next=> %s \n\n", args)
-	}
-}
-
 // get <key> <field> [|]
-func get(arg string) {
+func get(arg string) string {
+	var output string
 	args := strings.Split(arg, " ")
 
 	required := 2
@@ -376,18 +392,21 @@ func get(arg string) {
 	value := memory[key][field]
 
 	if *debug {
-		fmt.Printf("=> get %s %s\n", key, field)
-		fmt.Printf("   %s\n", value)
+		output += dformat(fmt.Sprintf("get %s %s\n", key, field))
+		output += dformat(fmt.Sprintf("   %s\n", value))
 	}
 
-	if piped := piped(required, args, value); !piped {
-		fmt.Println(value)
+	if piped, s := piped(required, args, value); !piped {
+		output += fmt.Sprintln(value)
+		output += s
 	}
 
+	return output
 }
 
-func graph(arg string) {
+func graph(arg string) string {
 	tools.Bashcmd([]string{"open", "-a", "Google Chrome", "./asset/graph.svg"})
+	return ""
 }
 
 func transpose(s string) string {
@@ -399,64 +418,66 @@ func transpose(s string) string {
 
 // healthcheck <url> | <nextTerm>
 //              0    1     2
-func healthcheck(arg string) {
+func healthcheck(arg string) string {
+	var output string
 	args := strings.Split(arg, " ")
 
 	required := 1
 	url := transpose(args[0])
 	value := ""
 
-	if *debug {
-		fmt.Printf("=> healthcheck %s\n", url)
-	}
-
 	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Println(err)
+		output += eformat(fmt.Sprintln(err))
 	}
 
 	value = strconv.Itoa(resp.StatusCode)
 
-	if *debug {
-		fmt.Printf("   %s\n", value)
+	if piped, s := piped(required, args, value); !piped {
+		if *debug {
+			output += dformat(fmt.Sprintf("healthcheck %s | %s\n", url, s))
+		}
+		output += fmt.Sprintf("healthcheck status code is %s\n", value)
 	}
 
-	if piped := piped(required, args, value); !piped {
-		fmt.Println(value)
-	}
+	return output
 }
 
 // wait <seconds> | <cmd> <arg>
-func wait(arg string) {
+func wait(arg string) string {
+	var output string
 	args := strings.Split(arg, " ")
 	seconds, err := strconv.Atoi(args[0])
 	if err != nil {
-		fmt.Printf("expecting number but got %v instead \n", args[0])
-		return
+		return fmt.Sprintf("expecting number but got %v instead \n", args[0])
 	}
 
 	// execute wait
 	if *debug {
-		fmt.Printf("=> wait %d\n", seconds)
+		output += dformat(fmt.Sprintf("wait %d\n", seconds))
 	}
 	time.Sleep(time.Second * time.Duration(seconds))
 
 	// call chained command
 	if len(args) > 1 {
-		executeNextIfAny(args[1:])
+		output += executeNextIfAny(args[1:])
 	}
+
+	return output
 }
 
-func executeNextIfAny(args []string) {
+func executeNextIfAny(args []string) string {
 	if len(args) > 0 {
 		cmd := findCommand(args[0])
 		if cmd != nil {
-			cmd.action(strings.Join(args[1:], " "))
+			return cmd.action(strings.Join(args[1:], " "))
 		}
 	}
+	return ""
 }
 
-func monitor(arg string) {
+func monitor(arg string) string {
+	var output string
 	args := strings.Split(arg, " ")
 
 	// monitor off 1
@@ -470,21 +491,22 @@ func monitor(arg string) {
 				delete(monitorsDetail, k)
 			}
 		}
-		return
+		return ""
 	case "add":
 		interval, _ := strconv.Atoi(args[1])
 		monitorID++
 		monitors[monitorID] = true
 		monitorsDetail[monitorID] = strings.Join(args[2:], " ")
 		registerMonitor(monitorID, interval, args[2:])
-		return
+		return ""
 	case "ls":
 		for k, v := range monitorsDetail {
-			fmt.Printf("[%d] %s\n", k, v)
+			output += fmt.Sprintf("[%d] %s\n", k, v)
 		}
-		return
+		return output
 	}
 
+	return ""
 }
 
 func registerMonitor(id int, interval int, args []string) {
@@ -492,7 +514,7 @@ func registerMonitor(id int, interval int, args []string) {
 	go func() {
 		for {
 			if *debug {
-				fmt.Printf("\n[%d] %s \n", id, monitorsDetail[id])
+				fmt.Printf(dformat(fmt.Sprintf("running [%d] %s \n", id, monitorsDetail[id])))
 			}
 			if !monitors[id] {
 				return
@@ -508,21 +530,24 @@ func registerMonitor(id int, interval int, args []string) {
 }
 
 // repeat <count> <cmd> <args>
-func repeat(arg string) {
+func repeat(arg string) string {
+	var output string
 	args := strings.Split(arg, " ")
 	count, err := strconv.Atoi(args[0])
 	if err != nil {
-		fmt.Printf("expecting number but got %s instead \n", args[0])
+		output += dformat(fmt.Sprintf("expecting number but got %s instead \n", args[0]))
 	}
 
 	cmd := findCommand(args[1])
 	if cmd == nil {
-		return
+		return output
 	}
 
 	for i := 0; i < count; i++ {
-		cmd.action(strings.Join(args[2:], " "))
+		output += dformat(cmd.action(strings.Join(args[2:], " ")))
 	}
+
+	return output
 }
 
 func findCommand(verb string) *SimpleCommand {
@@ -537,29 +562,47 @@ func findCommand(verb string) *SimpleCommand {
 	return nil
 }
 
-func setdebug(arg string) {
+func dformat(s string) string {
+	return "\u001B[0;32mdebug> " + s + "\u001B[0m"
+}
+
+func eformat(s string) string {
+	return "\u001B[0;31merror> " + s + "\u001B[0m"
+}
+
+func setdebug(arg string) string {
+	var output string
+	output += dformat("debug " + arg + "\n")
+
 	switch arg {
 	case "true":
 		*debug = true
+		output += "debug on\n"
 	case "false":
 		*debug = false
+		output += "debug off\n"
 	case "on":
 		*debug = true
+		output += "debug on\n"
 	case "off":
 		*debug = false
+		output += "debug off\n"
 	default:
 		value := "off"
 		if *debug {
 			value = "on"
 		}
-		fmt.Println(value)
+		return "debug " + value + "\n"
 	}
+
+	return output
 }
 
 var ws *websocket.Conn
 var id string
 
-func slack(arg string) {
+func slack(arg string) string {
+	var output string
 	if arg == "on" && ws == nil {
 		ws, id = tools.SlackConnect(os.Getenv("SLACK_BOT_TOKEN"))
 
@@ -578,7 +621,7 @@ func slack(arg string) {
 				if m.Type == "message" && strings.HasPrefix(m.Text, "<@"+id+">") {
 
 					parts := strings.Fields(m.Text)
-					fmt.Printf("\nuser : %s\n", strings.Join(parts[1:], " "))
+					output += fmt.Sprintf("\nuser : %s\n", strings.Join(parts[1:], " "))
 					if len(parts) > 1 {
 						executeNextIfAny(parts[1:])
 					}
@@ -596,4 +639,6 @@ func slack(arg string) {
 			ws.Close()
 		}()
 	}
+
+	return output
 }

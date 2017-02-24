@@ -5,7 +5,7 @@ import "strings"
 type Command interface {
 	Verb() string
 	Choices() []string
-	ActionFunc() func(string)
+	ActionFunc() func(string) string
 	SecWordCompleteFunc() func(string) []string
 }
 
