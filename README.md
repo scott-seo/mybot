@@ -33,6 +33,9 @@ Here is the list of commands I have implemented so far. I haven't implmented man
 # Mini scripting language
 ![mini scripting language](https://github.com/scott-seo/mybot/raw/master/asset/scripting.png "Scripting")
 
+# Example Usage
+<video controls="controls" width="800" height="600" name="Video Name" src="https://github.com/scott-seo/mybot/blob/master/asset/example.mov"></video>
+
 # Installation 
 ```
 go get github.com/scott-seo/mybot
